@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="AbilityDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/core/magic/ability_def.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"skyward"
+display_name = "Skyward Step"
+kind = &"skyward"
+lumen_cost = 10.0
+cooldown_ticks = 15
+magnitude = 14.0
+swatch_color = Color(0.0, 0.85, 0.95, 1)
+description = "The world exhales beneath you. A surge of investiture channels downward and the ground pushes back — launching you skyward in a breath of cyan light."

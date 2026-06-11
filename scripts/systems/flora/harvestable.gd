@@ -12,3 +12,9 @@ extends Node
 
 ## Prompt text shown in the HUD crosshair area while targeting this prop.
 @export var prompt: String = "Harvest"
+
+## Lumen yielded to the player's well when this prop is harvested.
+## Gathering living flora is the only source of the Lumen investiture, so this
+## value is the per-prop reward (mushroom 8, flower 10, crystal 15). Zero or
+## negative values yield nothing.
+@export var lumen: float = 8.0

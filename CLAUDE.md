@@ -80,11 +80,15 @@ See `docs/ARCHITECTURE.md` for the full design.
 scenes/              Godot scene files (.tscn) — incl. scenes/ui/ (hud, inventory_panel)
 scripts/core/        Engine-level systems (world, voxels, commands, items)
 scripts/core/items/  Item/recipe data contracts (ItemDef, ItemAmount, Recipe)
+scripts/core/magic/  Ability data contract (AbilityDef)
+scripts/core/sim/    Tick substrate (SimulationClock)
 scripts/systems/     Gameplay systems (items, inventory, crafting, flora, biomes)
+scripts/systems/magic/  Lumen magic (LumenWell, MagicSystem, AbilityRegistry)
 scripts/ui/          UI scripts (hud, inventory_panel)
 resources/items/     Item .tres definitions (soil, crystal_shard, …)
 resources/recipes/   Crafting recipe .tres files (bloom_brick, lumen_torch)
-resources/           Data resources (.tres) — items, recipes, flora, biomes
+resources/abilities/ Ability .tres files (shape_burst, lumen_bloom, skyward)
+resources/           Data resources (.tres) — items, recipes, abilities, flora, biomes
 shaders/             GLSL / Godot shaders
 assets/              Art, audio, fonts (binary, gitignored if large)
 tests/unit/          GUT unit tests

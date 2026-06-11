@@ -21,3 +21,14 @@ var loot: LootService
 ## Callable(node: Node) that frees a harvested prop node safely.
 ## Set by World during wiring. May be an invalid Callable in test contexts.
 var flora_harvest: Callable = Callable()
+
+## The magic rule gate. Casts route through it for cost/cooldown enforcement.
+## May be null in legacy / unit-test contexts.
+var magic: MagicSystem
+## Maps an ability [code]kind[/code] (StringName) to the effect that realizes it:
+## Callable(ability: AbilityDef, target: Vector3) -> bool. Installed by World.
+## An empty dictionary means every cast resolves to the no_effect path.
+var ability_effects: Dictionary = {}
+## Callable(amount: float) that adds gathered lumen to the player's well.
+## Set by World during wiring. May be an invalid Callable in test contexts.
+var lumen_gain: Callable = Callable()

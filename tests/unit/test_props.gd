@@ -10,6 +10,8 @@ const PROP_PATHS := [
 	"res://scenes/props/crystal.tscn",
 ]
 
+const LUMEN_BLOOM_PATH := "res://scenes/props/lumen_bloom.tscn"
+
 
 func _count_nodes_of_class(node: Node, class_str: String) -> int:
 	var count := 0
@@ -169,3 +171,102 @@ func test_all_emissive_materials_have_emission_enabled() -> void:
 	assert_true(
 		found_at_least_one_emissive, "At least one emissive material must exist across all props"
 	)
+
+
+# ---------------------------------------------------------------------------
+# Lumen Bloom mote tests
+# ---------------------------------------------------------------------------
+
+
+## Verify the lumen_bloom scene loads successfully.
+func test_lumen_bloom_scene_loads() -> void:
+	var packed: PackedScene = load(LUMEN_BLOOM_PATH)
+	assert_not_null(packed, "lumen_bloom.tscn must load")
+
+
+## Verify the mote root is a Node3D with the LumenBloomMote script attached.
+func test_lumen_bloom_root_has_script() -> void:
+	var packed: PackedScene = load(LUMEN_BLOOM_PATH)
+	if packed == null:
+		return
+	var root := packed.instantiate()
+	assert_not_null(root, "lumen_bloom root must not be null")
+	assert_true(root is Node3D, "lumen_bloom root must be Node3D")
+	assert_true(root.get_script() != null, "lumen_bloom root must have a script attached")
+	root.queue_free()
+
+
+## Verify the mote has an emissive MeshInstance3D child.
+func test_lumen_bloom_has_emissive_mesh() -> void:
+	var packed: PackedScene = load(LUMEN_BLOOM_PATH)
+	if packed == null:
+		return
+	var root := packed.instantiate()
+	assert_true(_has_mesh_descendant(root), "lumen_bloom must have at least one MeshInstance3D")
+	var mats := _collect_materials(root)
+	var has_emissive := false
+	for mat in mats:
+		if mat is StandardMaterial3D:
+			var smat := mat as StandardMaterial3D
+			if smat.emission_enabled and smat.emission_energy_multiplier > 0.0:
+				has_emissive = true
+	assert_true(has_emissive, "lumen_bloom must have at least one emissive material")
+	root.queue_free()
+
+
+## Verify the mote has exactly one OmniLight3D child.
+func test_lumen_bloom_has_omni_light() -> void:
+	var packed: PackedScene = load(LUMEN_BLOOM_PATH)
+	if packed == null:
+		return
+	var root := packed.instantiate()
+	var light_count := _count_nodes_of_class(root, "OmniLight3D")
+	assert_eq(light_count, 1, "lumen_bloom must have exactly one OmniLight3D")
+	root.queue_free()
+
+
+## Verify configure(radius) sets the OmniLight3D range to the given radius.
+func test_lumen_bloom_configure_sets_light_range() -> void:
+	var packed: PackedScene = load(LUMEN_BLOOM_PATH)
+	if packed == null:
+		return
+	var root := packed.instantiate()
+	add_child_autofree(root)
+	root.configure(12.0)
+	var light := root.get_node_or_null("OmniLight3D")
+	assert_not_null(light, "lumen_bloom must have OmniLight3D for configure to target")
+	if light != null:
+		assert_almost_eq(light.omni_range, 12.0, 0.01, "configure(12) must set omni_range to 12")
+
+
+# ---------------------------------------------------------------------------
+# Lumen values on harvested flora
+# ---------------------------------------------------------------------------
+
+
+## Verify each flora prop's Harvestable has the correct lumen value.
+func test_prop_harvestable_lumen_values() -> void:
+	var expected := {
+		"res://scenes/props/glow_mushroom.tscn": 8.0,
+		"res://scenes/props/glow_flower.tscn": 10.0,
+		"res://scenes/props/crystal.tscn": 15.0,
+	}
+	for path in expected:
+		var packed: PackedScene = load(path)
+		if packed == null:
+			continue
+		var root := packed.instantiate()
+		var harvestable := root.get_node_or_null("Harvestable")
+		if harvestable == null:
+			root.queue_free()
+			continue
+		var lumen = harvestable.get("lumen")
+		assert_not_null(lumen, "Harvestable must have a lumen property: %s" % path)
+		if lumen != null:
+			assert_almost_eq(
+				float(lumen),
+				expected[path],
+				0.01,
+				"Harvestable lumen must be %.1f for %s" % [expected[path], path]
+			)
+		root.queue_free()

@@ -20,6 +20,12 @@ signal place_requested(world_pos: Vector3, radius: float)
 ## target is the prop's root Node; drops is its Array[ItemAmount].
 signal harvest_requested(target: Node, drops: Array[ItemAmount])
 
+## Emitted when the player activates a magic ability slot.
+## slot is 1-indexed (1, 2, or 3); target_pos is the world-space hit point
+## from the raycast, or a point 6 m along the camera forward when no surface
+## is hit (abilities like Skyward do not require a surface target).
+signal cast_requested(slot: int, target_pos: Vector3)
+
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
@@ -82,6 +88,11 @@ func _unhandled_input(event: InputEvent) -> void:
 		var action_interact := "interact"
 		if InputMap.has_action(action_interact) and event.is_action_pressed(action_interact):
 			_try_harvest()
+
+		for slot in [1, 2, 3]:
+			var action_cast := "cast_%d" % slot
+			if InputMap.has_action(action_cast) and event.is_action_pressed(action_cast):
+				cast_requested.emit(slot, _cast_target())
 
 
 func _input(event: InputEvent) -> void:
@@ -180,6 +191,16 @@ func _try_harvest() -> void:
 			harvest_requested.emit(candidate, harvestable.drops)
 			return
 		candidate = candidate.get_parent()
+
+
+## Returns the raycast hit point when colliding, otherwise a point 6 m along
+## the camera forward.  Used as the target for ability casts.
+func _cast_target() -> Vector3:
+	if _raycast != null and _raycast.is_colliding():
+		return _raycast.get_collision_point()
+	if _camera != null:
+		return _camera.global_transform.origin + (-_camera.global_transform.basis.z) * 6.0
+	return global_transform.origin
 
 
 # ---------------------------------------------------------------------------

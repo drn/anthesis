@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="AbilityDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/core/magic/ability_def.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"shape_burst"
+display_name = "Worldshaper Burst"
+kind = &"shape_burst"
+lumen_cost = 25.0
+cooldown_ticks = 30
+magnitude = 4.0
+swatch_color = Color(0.1, 0.4, 1.0, 1)
+description = "Tears a sphere of world apart. The investiture floods outward in a disc of electric blue, unmaking stone and soil in a perfect carved radius."
