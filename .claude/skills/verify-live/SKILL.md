@@ -208,7 +208,9 @@ host/client pair (host first, then client on loopback) — see the header of
 - **`res://` is read-only at runtime.** Save PNGs via
   `ProjectSettings.globalize_path(...)` to a real dir, or `user://`.
 - **Forgot `--import`.** A fresh worktree errors on missing `.import` files /
-  black props. Run `make import` once.
+  black props. Run `make import` once. Same fix when a rebase/pull brings in new
+  scripts and the harness dies with `Identifier "X" not declared` parse errors —
+  that's the stale `class_name` cache, not your harness.
 - **Always prefix `HOME=/tmp/anthesis-home`** or the run pollutes the real home.
 
 ## Related
