@@ -25,7 +25,7 @@ See CLAUDE.md for the full AI build conventions, tech stack, and architecture.
 
 Repo skills under `.claude/skills/`: **`verify-live`** (boot `world.tscn`
 windowed, drive gameplay via `world.command_bus().execute(...)`, screenshot) and
-**`new-phase`** (the pinned-contract parallel workflow that shipped phases 1-7).
+**`new-phase`** (the pinned-contract parallel workflow that shipped phases 1-9).
 
 ```bash
 # full GUT suite (windowed harness: drop --headless, swap the -s script)
@@ -53,3 +53,10 @@ find scripts tests -name "*.gd" | xargs uvx --from "gdtoolkit==4.*" gdlint
 - Keep RNG in `WorldSeed.derive(...)`; hold the owner of any `Callable` seam (GC).
 - `.tres` typed arrays: `Array[ExtResource("2")]([SubResource("x")])`, not bare `[...]`.
 - `project.godot` and `world.gd` are integrator-only — never edit in a parallel builder slice.
+- Parallel agents never run the Godot binary (shared `.godot` cache corrupts) — builders
+  lint with `uvx gdtoolkit` only; one integrator runs the suite.
+- `world.gd` sits near the `gdlintrc` 1200-line ceiling and AT the 20-public-method cap —
+  new phase wiring goes in a `scripts/systems/world/<phase>_rig.gd` (see FerromancyRig,
+  TempestRig), never in new World getters.
+- Ability hotbar is alphabetical by id — adding an ability reshuffles every cast slot
+  (update `cast_N` actions, player hotkey loop, GAMEPLAY.md, registry-count tests).
