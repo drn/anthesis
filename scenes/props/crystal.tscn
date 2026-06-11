@@ -106,3 +106,4 @@ shape = SubResource("SphereShape3D_crystal")
 script = ExtResource("Harvestable_script")
 drops = Array[ExtResource("ItemAmount_script")]([SubResource("Drop_crystal_shard_1")])
 prompt = "Harvest"
+lumen = 15.0

@@ -138,3 +138,4 @@ shape = SubResource("SphereShape3D_flower")
 script = ExtResource("Harvestable_script")
 drops = Array[ExtResource("ItemAmount_script")]([SubResource("Drop_lumen_petal_1")])
 prompt = "Harvest"
+lumen = 10.0

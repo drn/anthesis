@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="AbilityDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/core/magic/ability_def.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"lumen_bloom"
+display_name = "Lumen Bloom"
+kind = &"lumen_bloom"
+lumen_cost = 15.0
+cooldown_ticks = 20
+magnitude = 6.0
+swatch_color = Color(0.85, 0.1, 0.75, 1)
+description = "Plants a blooming mote of living light. The investiture condenses into a magenta orb that pulses and breathes, pushing back the dark for those who gather it."

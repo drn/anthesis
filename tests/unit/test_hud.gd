@@ -61,6 +61,7 @@ func test_hud_bind_exists() -> void:
 	add_child_autofree(hud)
 	assert_true(hud.has_method("bind"), "HUD must expose bind()")
 	assert_true(hud.has_method("show_loot"), "HUD must expose show_loot()")
+	assert_true(hud.has_method("bind_magic"), "HUD must expose bind_magic()")
 
 
 func test_hud_inventory_panel_hidden_by_default() -> void:
@@ -137,3 +138,171 @@ func test_panel_refreshes_on_inventory_changed() -> void:
 	inv.add(&"soil", 5)
 	assert_eq(first_count.text, "5", "Slot 0 reflects added item count after changed")
 	assert_eq(panel._inventory.count_of(&"soil"), 5, "Inventory bound to panel holds the item")
+
+
+# ---------------------------------------------------------------------------
+# Magic HUD: lumen bar + ability slots
+# ---------------------------------------------------------------------------
+
+
+class FakeWell:
+	extends RefCounted
+	signal changed(current: float, capacity: float)
+	var _current: float
+	var _capacity: float
+
+	func _init(current: float, capacity: float) -> void:
+		_current = current
+		_capacity = capacity
+
+	func current() -> float:
+		return _current
+
+	func capacity() -> float:
+		return _capacity
+
+	func set_current(value: float) -> void:
+		_current = value
+		changed.emit(_current, _capacity)
+
+
+class FakeMagic:
+	extends RefCounted
+	signal cast_failed(ability: Object, reason: StringName)
+	var remaining := 0
+
+	func cooldown_remaining(_ability: Object) -> int:
+		return remaining
+
+
+func _ability_obj(id: StringName, cost: float, cooldown: int, color: Color) -> Object:
+	if ResourceLoader.exists("res://scripts/core/magic/ability_def.gd"):
+		var script: Object = load("res://scripts/core/magic/ability_def.gd")
+		var def: Object = script.new()
+		def.id = id
+		def.display_name = String(id).capitalize()
+		def.lumen_cost = cost
+		def.cooldown_ticks = cooldown
+		def.swatch_color = color
+		return def
+	# Fallback duck-typed stub mirroring AbilityDef fields the HUD reads.
+	return AbilityStub.new(id, cost, cooldown, color)
+
+
+class AbilityStub:
+	extends RefCounted
+	var id: StringName
+	var display_name: String
+	var lumen_cost: float
+	var cooldown_ticks: int
+	var swatch_color: Color
+
+	func _init(p_id: StringName, p_cost: float, p_cd: int, p_color: Color) -> void:
+		id = p_id
+		display_name = String(p_id).capitalize()
+		lumen_cost = p_cost
+		cooldown_ticks = p_cd
+		swatch_color = p_color
+
+
+func _three_abilities() -> Array:
+	return [
+		_ability_obj(&"shape_burst", 25.0, 30, Color(0.2, 0.5, 1.0)),
+		_ability_obj(&"lumen_bloom", 15.0, 20, Color(0.9, 0.3, 0.9)),
+		_ability_obj(&"skyward", 10.0, 15, Color.CYAN),
+	]
+
+
+func _bound_hud(well: Object, magic: Object, abilities: Array) -> Hud:
+	var hud := (load(HUD_PATH) as PackedScene).instantiate() as Hud
+	add_child_autofree(hud)
+	hud.bind_magic(well, magic, abilities)
+	return hud
+
+
+func test_hud_has_lumen_bar() -> void:
+	var hud := (load(HUD_PATH) as PackedScene).instantiate()
+	add_child_autofree(hud)
+	var bar := hud.get_node_or_null("LumenBar")
+	assert_not_null(bar, "HUD must have a LumenBar node")
+	var label := hud.get_node_or_null("LumenBar/Margin/Body/Label")
+	assert_not_null(label, "Lumen bar must have a label")
+	var fill := hud.get_node_or_null("LumenBar/Margin/Body/Track/Fill")
+	assert_not_null(fill, "Lumen bar must have a fill rect")
+
+
+func test_hud_has_ability_slots_container() -> void:
+	var hud := (load(HUD_PATH) as PackedScene).instantiate()
+	add_child_autofree(hud)
+	assert_not_null(hud.get_node_or_null("AbilitySlots"), "HUD must have an AbilitySlots container")
+
+
+func test_bind_magic_nil_safe() -> void:
+	var hud := (load(HUD_PATH) as PackedScene).instantiate() as Hud
+	add_child_autofree(hud)
+	hud.bind_magic(null, null, [])
+	assert_eq(hud.get_node("AbilitySlots").get_child_count(), 0, "No slots when no abilities")
+	# Null abilities arg must not crash.
+	hud.bind_magic(null, null, [])
+	assert_true(true, "bind_magic tolerates null collaborators")
+
+
+func test_bind_magic_builds_three_slots() -> void:
+	var hud := _bound_hud(FakeWell.new(30.0, 100.0), FakeMagic.new(), _three_abilities())
+	var slots := hud.get_node("AbilitySlots")
+	assert_eq(slots.get_child_count(), 3, "Three abilities -> three slots")
+
+
+func test_each_slot_has_cooldown_veil() -> void:
+	var hud := _bound_hud(FakeWell.new(30.0, 100.0), FakeMagic.new(), _three_abilities())
+	var slots := hud.get_node("AbilitySlots")
+	for slot in slots.get_children():
+		var veil := _find_named_descendant(slot, "CooldownVeil")
+		assert_not_null(veil, "Each ability slot must have a CooldownVeil overlay node")
+		assert_true(veil is ColorRect, "CooldownVeil must be a ColorRect")
+
+
+func test_lumen_label_reflects_well_changed() -> void:
+	var well := FakeWell.new(30.0, 100.0)
+	var hud := _bound_hud(well, FakeMagic.new(), _three_abilities())
+	var label := hud.get_node("LumenBar/Margin/Body/Label") as Label
+	assert_eq(label.text, "LUMEN 30 / 100", "Label shows initial well state on bind")
+
+	well.set_current(72.0)
+	assert_eq(label.text, "LUMEN 72 / 100", "Label updates on well.changed")
+
+
+func test_lumen_fill_color_shifts_with_charge() -> void:
+	var well := FakeWell.new(0.0, 100.0)
+	var hud := _bound_hud(well, FakeMagic.new(), _three_abilities())
+	var fill := hud.get_node("LumenBar/Margin/Body/Track/Fill") as ColorRect
+	var empty_color := fill.color
+	well.set_current(100.0)
+	assert_ne(fill.color, empty_color, "Fill color must shift as the well fills")
+
+
+func test_cooldown_veil_tracks_remaining() -> void:
+	var magic := FakeMagic.new()
+	var abilities := _three_abilities()
+	var hud := _bound_hud(FakeWell.new(30.0, 100.0), magic, abilities)
+	var veil := _find_named_descendant(hud.get_node("AbilitySlots").get_child(0), "CooldownVeil")
+
+	# No cooldown -> veil fully retracted (anchor_top == 1.0).
+	magic.remaining = 0
+	hud._process(0.016)
+	assert_almost_eq(veil.anchor_top, 1.0, 0.001, "Ready slot has a fully retracted veil")
+
+	# Full cooldown (30 ticks for shape_burst) -> veil fully covers (anchor_top == 0).
+	magic.remaining = 30
+	hud._process(0.016)
+	assert_almost_eq(veil.anchor_top, 0.0, 0.001, "Full cooldown veils the whole slot")
+
+
+func _find_named_descendant(node: Node, target: String) -> Node:
+	if node.name == target:
+		return node
+	for child in node.get_children():
+		var found := _find_named_descendant(child, target)
+		if found != null:
+			return found
+	return null

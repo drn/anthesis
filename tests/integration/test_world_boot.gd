@@ -141,3 +141,58 @@ func test_place_request_routes_to_world_handler() -> void:
 		if conn["callable"].get_object() == world:
 			routed_to_world = true
 	assert_true(routed_to_world, "place_requested must route to a World handler")
+
+
+# ---------------------------------------------------------------------------
+# Phase 3 — magic substrate wiring (contract #13)
+# ---------------------------------------------------------------------------
+
+
+func test_simulation_clock_present() -> void:
+	var world := _boot()
+	var clk := world.clock()
+	assert_not_null(clk, "clock() must return a SimulationClock")
+	assert_true(clk is SimulationClock, "clock() must be a SimulationClock")
+	assert_true(clk.is_inside_tree(), "the SimulationClock must be in the scene tree")
+
+
+func test_magic_and_well_wired() -> void:
+	var world := _boot()
+	var mag := world.magic()
+	var well := world.lumen_well()
+	assert_not_null(mag, "magic() must return a MagicSystem")
+	assert_true(mag is MagicSystem, "magic() must be a MagicSystem")
+	assert_not_null(well, "lumen_well() must return a LumenWell")
+	assert_eq(well.capacity(), 100.0, "the well must hold 100 lumen")
+	assert_eq(well.current(), 30.0, "the world must start with 30 lumen")
+
+
+func test_blooms_container_present() -> void:
+	var world := _boot()
+	var blooms := world.get_node_or_null("Blooms")
+	assert_not_null(blooms, "a Blooms container must exist for spawned motes")
+
+
+func test_ability_effects_installed_for_all_kinds() -> void:
+	# The context's ability_effects must register a valid Callable for each kind
+	# so no live ability falls through to the no_effect path.
+	var world := _boot()
+	var bus := world.command_bus()
+	var ctx: WorldContext = bus.get("_ctx")
+	for kind in [&"shape_burst", &"lumen_bloom", &"skyward"]:
+		var effect: Variant = ctx.ability_effects.get(kind, null)
+		assert_not_null(effect, "ability_effects must register kind %s" % kind)
+		assert_true((effect as Callable).is_valid(), "effect for %s must be valid" % kind)
+	assert_true(ctx.magic is MagicSystem, "context must carry the MagicSystem")
+	assert_true(ctx.lumen_gain.is_valid(), "context must carry a valid lumen_gain hook")
+
+
+func test_player_cast_signal_connected() -> void:
+	var world := _boot()
+	var p := world.player()
+	var connections := p.cast_requested.get_connections()
+	var routed_to_world := false
+	for conn in connections:
+		if conn["callable"].get_object() == world:
+			routed_to_world = true
+	assert_true(routed_to_world, "cast_requested must route to a World handler")

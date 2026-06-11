@@ -43,6 +43,14 @@ A fixed-rate tick loop drives all simulation that must be deterministic: lightin
 - Each tick system is a module that receives a read view of Layer 1, emits a list of `Command` objects (see below), and nothing else.
 - The tick substrate is shared deliberately — magic propagation and lighting use the same flood-fill primitives.
 
+**Live (Phase 3):** `SimulationClock` (`scripts/core/sim/`) is the heartbeat. It
+accumulates frame time in `_process` and emits `ticked(tick_index)` at a fixed
+`ticks_per_second` (default 10), advancing the index by exactly one per emission and
+capping catch-up at 10 ticks/frame to avoid a spiral of death. It is deliberately on
+`_process`, not `_physics_process`, so it pauses without freezing physics. The magic
+system reads `current_tick()` to gate cooldowns deterministically — no wall-clock time
+ever enters gameplay logic.
+
 ### Layer 4 — Presentation (reads state, never owns it)
 
 Lighting, fog, sky, audio, and UI read from Layers 1 and 3 to display the current world state. They do not hold game state.
@@ -103,6 +111,33 @@ All mutations route through the command layer: `DigCommand` awards dig loot,
 `HarvestCommand` awards harvest drops then frees the prop, and `CraftCommand` runs a
 recipe. The HUD (`scripts/ui/`) is pure presentation — it reads inventory state and
 defers crafting back to `World` via a callback, which submits a `CraftCommand` to the bus.
+
+### Phase 3 — Lumen Magic (live)
+
+A rule-based magic system in the Sanderson tradition: every ability has a fixed lumen
+cost and a tick-based cooldown, and the only source of lumen is harvesting living flora.
+
+- **Investiture** (`LumenWell`, `scripts/systems/magic/`): a small finite reservoir
+  (capacity 100, world starts at 30). `add` clamps and reports overflow; `spend` is
+  all-or-nothing; `changed` fires only on real movement.
+- **Data** (`AbilityDef`, `scripts/core/magic/`; `.tres` in `resources/abilities/`):
+  three abilities — Worldshaper Burst (carve), Lumen Bloom (plant a light mote), Skyward
+  Step (upward impulse) — each declaring id, kind, cost, cooldown ticks, magnitude, and
+  swatch color. Loaded by `AbilityRegistry`, sorted by id for stable hotkeys 1/2/3.
+- **Rule gate** (`MagicSystem`): the one place casts are adjudicated, in a fixed order —
+  cooldown, then cost, then the effect. Only a successful effect spends lumen and arms
+  the cooldown, keyed by ability id against the `SimulationClock` tick. A failed effect
+  refunds nothing because nothing was spent.
+- **Routing**: the player emits `cast_requested(slot, target)`; `World` maps the slot to
+  an `AbilityDef` and submits a `CastCommand`. The command looks up the effect Callable
+  registered on `WorldContext.ability_effects` by ability kind and hands it to
+  `MagicSystem.try_cast`. Effects (carve via `TerrainEditService`, spawn a bloom mote
+  under the `Blooms` container, push the player skyward) live in `World`, never in the
+  command. `HarvestCommand` credits a harvested prop's `lumen` back into the well via
+  `WorldContext.lumen_gain`, closing the gather→cast loop.
+
+The HUD's lumen bar and ability slots read the well and rule gate; cooldown veils and
+cast-failure flashes are presentation-only, driven by signals and per-frame polling.
 
 ---
 

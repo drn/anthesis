@@ -69,6 +69,10 @@ func test_has_signal_harvest_requested() -> void:
 	)
 
 
+func test_has_signal_cast_requested() -> void:
+	assert_true(_player.has_signal("cast_requested"), "Player must declare signal cast_requested")
+
+
 # ---------------------------------------------------------------------------
 # Camera configuration
 # ---------------------------------------------------------------------------
