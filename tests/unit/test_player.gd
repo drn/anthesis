@@ -79,6 +79,27 @@ func test_has_signal_strike_requested() -> void:
 	)
 
 
+func test_has_signal_place_block_requested() -> void:
+	assert_true(
+		_player.has_signal("place_block_requested"),
+		"Player must declare signal place_block_requested"
+	)
+
+
+func test_has_signal_block_interact_requested() -> void:
+	assert_true(
+		_player.has_signal("block_interact_requested"),
+		"Player must declare signal block_interact_requested"
+	)
+
+
+func test_has_signal_block_remove_requested() -> void:
+	assert_true(
+		_player.has_signal("block_remove_requested"),
+		"Player must declare signal block_remove_requested"
+	)
+
+
 # ---------------------------------------------------------------------------
 # Camera configuration
 # ---------------------------------------------------------------------------

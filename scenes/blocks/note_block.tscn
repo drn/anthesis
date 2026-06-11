@@ -1,0 +1,71 @@
+[gd_scene load_steps=7 format=3 uid="uid://canthesisnoteblock0"]
+
+[ext_resource type="Script" path="res://scripts/systems/sequencer/note_block.gd" id="NoteBlock_script"]
+
+[sub_resource type="StandardMaterial3D" id="Mat_note"]
+albedo_color = Color(0.1, 0.9, 1.0, 1)
+emission_enabled = true
+emission = Color(0.1, 0.9, 1.0, 1)
+emission_energy_multiplier = 3.0
+roughness = 0.08
+metallic = 0.15
+
+[sub_resource type="BoxMesh" id="BoxMesh_note"]
+size = Vector3(0.42, 0.42, 0.42)
+
+[sub_resource type="SphereShape3D" id="SphereShape3D_note"]
+radius = 0.5
+
+[sub_resource type="Animation" id="Animation_idle_spin"]
+resource_name = "idle_spin"
+length = 4.0
+loop_mode = 1
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Crystal:rotation")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0.0, 4.0),
+"transitions": PackedFloat32Array(1.0, 1.0),
+"update": 0,
+"values": [Vector3(0.785398, 0.0, 0.785398), Vector3(0.785398, 6.28319, 0.785398)]
+}
+
+[sub_resource type="AnimationLibrary" id="AnimationLibrary_0"]
+_data = {
+"idle_spin": SubResource("Animation_idle_spin")
+}
+
+[node name="NoteBlock" type="Node3D" groups=["note_blocks"]]
+script = ExtResource("NoteBlock_script")
+
+[node name="Crystal" type="MeshInstance3D" parent="."]
+transform = Transform3D(0.707107, 0, 0.707107, 0, 1, 0, -0.707107, 0, 0.707107, 0, 0.35, 0)
+mesh = SubResource("BoxMesh_note")
+surface_material_override/0 = SubResource("Mat_note")
+
+[node name="NoteLight" type="OmniLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.35, 0)
+light_color = Color(0.4, 0.8, 1.0, 1)
+light_energy = 2.0
+omni_range = 4.0
+shadow_enabled = false
+
+[node name="StaticBody3D" type="StaticBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.35, 0)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="StaticBody3D"]
+shape = SubResource("SphereShape3D_note")
+
+[node name="AudioStreamPlayer3D" type="AudioStreamPlayer3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.35, 0)
+unit_size = 8.0
+max_db = -3.0
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="."]
+libraries = {
+"": SubResource("AnimationLibrary_0")
+}
+autoplay = "idle_spin"

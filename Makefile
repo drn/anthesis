@@ -1,6 +1,6 @@
 GODOT ?= tools/godot/macos_editor.app/Contents/MacOS/Godot
 
-.PHONY: setup edit run import test lint format format-check stems
+.PHONY: setup edit run import test lint format format-check stems notes
 
 # Check that the Godot binary exists before targets that need it.
 _check_godot:
@@ -51,3 +51,7 @@ format-check:
 ## Regenerate the procedural adaptive-music stems (stdlib Python, idempotent).
 stems:
 	python3 scripts/tools/generate_stems.py
+
+## Regenerate the procedural sequencer note bank (stdlib Python, idempotent).
+notes:
+	python3 scripts/tools/generate_notes.py

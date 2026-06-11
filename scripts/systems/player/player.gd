@@ -31,6 +31,18 @@ signal cast_requested(slot: int, target_pos: Vector3)
 ## target_id is the collider's instance ID; hit_point is the collision point.
 signal strike_requested(target_id: int, hit_point: Vector3)
 
+## Emitted when the player presses N (place_core) and the raycast hits a surface.
+## item_id is &"sequencer_core"; position is the hit point offset by the normal.
+signal place_block_requested(item_id: StringName, position: Vector3)
+
+## Emitted when the player presses E (interact) on a node in group "note_blocks".
+## target is the note block's root Node.
+signal block_interact_requested(target: Node)
+
+## Emitted when the player presses F (strike) on a node in group "note_blocks"
+## or "sequencer_cores".  target is the block's root Node.
+signal block_remove_requested(target: Node)
+
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
@@ -94,11 +106,19 @@ func _unhandled_input(event: InputEvent) -> void:
 
 		var action_interact := "interact"
 		if InputMap.has_action(action_interact) and event.is_action_pressed(action_interact):
-			_try_harvest()
+			_try_interact()
 
 		var action_strike := "strike"
 		if InputMap.has_action(action_strike) and event.is_action_pressed(action_strike):
 			_try_strike()
+
+		var action_place_core := "place_core"
+		if InputMap.has_action(action_place_core) and event.is_action_pressed(action_place_core):
+			_try_place_block(&"sequencer_core")
+
+		var action_place_note := "place_note"
+		if InputMap.has_action(action_place_note) and event.is_action_pressed(action_place_note):
+			_try_place_block(&"note_block")
 
 		for slot in [1, 2, 3]:
 			var action_cast := "cast_%d" % slot
@@ -190,11 +210,41 @@ func _try_place() -> void:
 	place_requested.emit(hit + normal * 0.5, PLACE_RADIUS)
 
 
-func _try_harvest() -> void:
+## Place a block item at the raycast hit surface (offset outward by the normal).
+## item_id must be &"sequencer_core" or &"note_block".
+func _try_place_block(item_id: StringName) -> void:
 	if _raycast == null or not _raycast.is_colliding():
 		return
-	# Walk up the collider owner chain looking for a Harvestable child.
+	var hit := _raycast.get_collision_point()
+	var normal := _raycast.get_collision_normal()
+	place_block_requested.emit(item_id, hit + normal * 0.3)
+
+
+## Walk the owner chain from collider toward the scene root and return the
+## first node that is in the given group, or null if none is found.
+func _root_in_group(collider: Node, group: StringName) -> Node:
+	var candidate: Node = collider
+	while candidate != null:
+		if candidate.is_in_group(group):
+			return candidate
+		candidate = candidate.get_parent()
+	return null
+
+
+## Interact (E): if the hit prop is a note block, cycle its pitch via signal;
+## otherwise fall through to harvest logic as before.
+func _try_interact() -> void:
+	if _raycast == null or not _raycast.is_colliding():
+		return
 	var collider := _raycast.get_collider()
+
+	# Check for note_block first — interact cycles pitch.
+	var note_block_root := _root_in_group(collider, &"note_blocks")
+	if note_block_root != null:
+		block_interact_requested.emit(note_block_root)
+		return
+
+	# Fall through to harvest logic.
 	var candidate: Node = collider
 	while candidate != null:
 		var harvestable := candidate.get_node_or_null("Harvestable")
@@ -208,10 +258,21 @@ func _try_strike() -> void:
 	if _raycast == null or not _raycast.is_colliding():
 		return
 	var collider := _raycast.get_collider()
-	if not (collider is CharacterBody3D and collider.is_in_group("umbrals")):
-		return
 	var hit := _raycast.get_collision_point()
 	var dist := global_transform.origin.distance_to(hit)
+
+	# Block removal: F on a note_block or sequencer_core emits block_remove_requested.
+	var block_root := _root_in_group(collider, &"note_blocks")
+	if block_root == null:
+		block_root = _root_in_group(collider, &"sequencer_cores")
+	if block_root != null:
+		if dist <= STRIKE_REACH:
+			block_remove_requested.emit(block_root)
+		return
+
+	# Umbral melee strike — original behaviour.
+	if not (collider is CharacterBody3D and collider.is_in_group("umbrals")):
+		return
 	if dist > STRIKE_REACH:
 		return
 	strike_requested.emit(collider.get_instance_id(), hit)
