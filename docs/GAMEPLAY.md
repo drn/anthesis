@@ -2,9 +2,9 @@
 
 How to play Anthesis: what every item does, where loot comes from, how magic,
 combat, and the in-world music sequencer work, and how the systems feed each
-other. This is the player-facing companion to
-[ARCHITECTURE.md](ARCHITECTURE.md) (which covers the same systems from the
-engineering side).
+other. This is the player-facing view; for the engineering side, see
+[ARCHITECTURE.md](ARCHITECTURE.md) (the layer model) and the per-system deep
+dives in [docs/systems/](systems/).
 
 ---
 
@@ -46,6 +46,9 @@ glowing flora, and fighting the shadow creatures that condense in the dark.
 
 Key bindings can be rebound from the pause menu (Esc).
 
+> This table mirrors the one in the [README](../README.md#controls) — if a
+> default binding changes, update both.
+
 ---
 
 ## Digging
@@ -80,7 +83,10 @@ fills your lumen well (the magic resource).
 |-------|-------|------------|
 | Glow Mushroom (cyan cap) | 8 | 2× Glow Spore |
 | Glow Flower (magenta petals) | 10 | 2× Lumen Petal |
-| Crystal formation | 15 | — |
+| Crystal formation | 15 | 3× Crystal Shard |
+
+Crystal formations are the best shard source in the game — three guaranteed
+shards per harvest, on top of the biggest lumen payout.
 
 Flora matters even when you don't harvest it: its glow suppresses Umbral
 spawning nearby (see [Combat](#combat-and-the-umbrals)). Stripping an area of
@@ -93,7 +99,7 @@ all its light makes it dangerous.
 | Item | Type | How you get it | What it's for |
 |------|------|----------------|---------------|
 | **Soil** | material | Digging (always) | Bloom Bricks |
-| **Crystal Shard** | material | Digging (18%), Shardling kills (2×) | Every recipe |
+| **Crystal Shard** | material | Crystal formations (3×), Digging (18%), Shardling kills (2×) | Every recipe |
 | **Glow Spore** | material | Glow Mushrooms (2×), Voidmoth kills (1×) | Torches, Note Blocks |
 | **Lumen Petal** | material | Glow Flowers (2×) | Lumen Torches |
 | **Bloom Brick** | material | Crafted | Note Blocks, Sequencer Core |
@@ -131,9 +137,12 @@ fails.
 
 | Key | Ability | Cost | Cooldown | Effect |
 |-----|---------|------|----------|--------|
-| **1** | **Lumen Bloom** | 15 | ~1.0 s | Plants a pulsing mote of light. Pushes back the dark — its glow counts as a safe zone that blocks Umbral spawns. |
-| **2** | **Worldshaper Burst** | 25 | ~1.5 s | Tears a sphere of terrain apart — digging as a spell, in a perfect carved radius. |
-| **3** | **Skyward Step** | 10 | ~0.75 s | The ground pushes back beneath you, launching you into the air. |
+| **1** | **Lumen Bloom** | 15 | 2.0 s | Plants a pulsing mote of light. Pushes back the dark — its glow counts as a safe zone that blocks Umbral spawns. |
+| **2** | **Worldshaper Burst** | 25 | 3.0 s | Tears a sphere of terrain apart — digging as a spell, in a perfect carved radius. |
+| **3** | **Skyward Step** | 10 | 1.5 s | The ground pushes back beneath you, launching you into the air. |
+
+(Cooldowns are defined in ticks on each ability's `.tres` — the simulation
+runs at 10 ticks per second, so 20 ticks = 2.0 s.)
 
 Tactically: Lumen Bloom is your portable safety, Worldshaper Burst is bulk
 excavation, and Skyward Step is mobility (and an escape button when Umbrals
