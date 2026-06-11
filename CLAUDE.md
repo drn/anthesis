@@ -38,6 +38,11 @@ make edit          # open Godot editor
 make run           # run the game
 ```
 
+`make run` / `make edit` / `make test` are self-sufficient: they download the
+editor (`setup`) and (re)build the import cache automatically when either is
+missing or stale, so they work from a fresh clone, a fresh worktree, or right
+after a pull.
+
 Headless test invocation (for reference):
 ```
 <godot-binary> --headless --path . -s res://addons/gut/gut_cmdln.gd -gconfig=res://.gutconfig.json -gexit
@@ -218,9 +223,10 @@ Traps seen building phases 1-8. Check these before debugging from scratch:
   directory must exist first — Godot segfaults in `RotatedFileLogger` when it
   cannot create `user://logs` (e.g. sandboxed writes to the real home), so
   `mkdir -p /tmp/anthesis-home` before any direct invocation.
-- **`make setup` before anything in a fresh worktree.** `tools/` is gitignored,
-  so a new worktree has no Godot binary — every `make` target that invokes the
-  editor fails with exit 1 until `make setup` downloads it.
+- **Fresh worktrees have no Godot binary** (`tools/` is gitignored). Every
+  `make` target that needs the editor now auto-runs `scripts/setup.sh` when the
+  binary is missing — manual `make setup` is only for `FORCE=1` re-downloads.
+  Direct (non-make) binary invocations still require the binary to exist.
 - **`--import` first.** A fresh worktree has no `.godot/imported/` cache. Run
   `make import` (or `<binary> --headless --path . --import`) before the first
   test run or after adding any `.tres` / asset, or you get missing-import errors.

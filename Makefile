@@ -13,13 +13,20 @@ GDFORMAT ?= $(shell command -v gdformat >/dev/null 2>&1 && echo gdformat || echo
 
 .PHONY: setup edit run import test lint format format-check stems notes _ensure_import
 
-# Check that the Godot binary exists before targets that need it.
+# Ensure the Godot binary exists before targets that need it. Missing binary
+# (fresh clone/worktree — tools/ is gitignored) self-heals by running setup;
+# only error if it is still missing afterward (e.g. a custom GODOT= path that
+# setup does not manage).
 _check_godot:
 	@if [ ! -f "$(GODOT)" ]; then \
+		echo "Godot binary not found at $(GODOT) — running setup..."; \
+		bash scripts/setup.sh; \
+	fi
+	@if [ ! -f "$(GODOT)" ]; then \
 		echo ""; \
-		echo "ERROR: Godot binary not found at: $(GODOT)"; \
-		echo "Run  make setup  to download the prebuilt editor, or set"; \
-		echo "  GODOT=/path/to/your/Godot  to use an existing installation."; \
+		echo "ERROR: Godot binary still not found at: $(GODOT)"; \
+		echo "setup.sh installs to tools/godot/; if you set GODOT= to a custom"; \
+		echo "path, point it at an existing Godot 4.6 + godot_voxel build."; \
 		echo ""; \
 		exit 1; \
 	fi
