@@ -1,6 +1,6 @@
 GODOT ?= tools/godot/macos_editor.app/Contents/MacOS/Godot
 
-.PHONY: setup edit run import test lint format format-check stems notes
+.PHONY: setup edit run import test lint format format-check stems notes _ensure_import
 
 # Check that the Godot binary exists before targets that need it.
 _check_godot:
@@ -17,12 +17,21 @@ _check_godot:
 setup:
 	bash scripts/setup.sh
 
+# First-run guard: the class_name registry lives in gitignored
+# .godot/global_script_class_cache.cfg. Booting without it produces a wall of
+# "Identifier not declared" parse errors, so import once when it is missing.
+_ensure_import: _check_godot
+	@if [ ! -f .godot/global_script_class_cache.cfg ]; then \
+		echo "No import cache found (fresh checkout) — running first import..."; \
+		$(GODOT) --headless --path . --import; \
+	fi
+
 ## Open the Godot editor (background).
-edit: _check_godot
+edit: _ensure_import
 	$(GODOT) --path . -e &
 
 ## Run the game directly.
-run: _check_godot
+run: _ensure_import
 	$(GODOT) --path .
 
 ## Import/reimport all assets headlessly (required before first test run).
