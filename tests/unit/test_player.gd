@@ -63,6 +63,12 @@ func test_has_signal_place_requested() -> void:
 	assert_true(_player.has_signal("place_requested"), "Player must declare signal place_requested")
 
 
+func test_has_signal_harvest_requested() -> void:
+	assert_true(
+		_player.has_signal("harvest_requested"), "Player must declare signal harvest_requested"
+	)
+
+
 # ---------------------------------------------------------------------------
 # Camera configuration
 # ---------------------------------------------------------------------------

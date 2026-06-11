@@ -1,4 +1,7 @@
-[gd_scene load_steps=9 format=3]
+[gd_scene load_steps=13 format=3]
+
+[ext_resource type="Script" path="res://scripts/systems/flora/harvestable.gd" id="Harvestable_script"]
+[ext_resource type="Script" path="res://scripts/core/items/item_amount.gd" id="ItemAmount_script"]
 
 [sub_resource type="StandardMaterial3D" id="Mat_cap"]
 albedo_color = Color(0.05, 0.6, 0.55, 1)
@@ -53,6 +56,14 @@ _data = {
 "pulse": SubResource("Animation_pulse")
 }
 
+[sub_resource type="SphereShape3D" id="SphereShape3D_mushroom"]
+radius = 0.9
+
+[sub_resource type="Resource" id="Drop_glow_spore_1"]
+script = ExtResource("ItemAmount_script")
+item_id = &"glow_spore"
+count = 2
+
 [node name="GlowMushroom" type="Node3D"]
 
 [node name="Stem" type="MeshInstance3D" parent="."]
@@ -77,3 +88,14 @@ libraries = {
 "": SubResource("AnimationLibrary_0")
 }
 autoplay = "pulse"
+
+[node name="StaticBody3D" type="StaticBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="StaticBody3D"]
+shape = SubResource("SphereShape3D_mushroom")
+
+[node name="Harvestable" type="Node" parent="."]
+script = ExtResource("Harvestable_script")
+drops = Array[ExtResource("ItemAmount_script")]([SubResource("Drop_glow_spore_1")])
+prompt = "Harvest"

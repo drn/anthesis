@@ -96,6 +96,56 @@ func test_all_props_have_exactly_one_omni_light() -> void:
 		root.queue_free()
 
 
+## Verify each prop has a StaticBody3D with at least one CollisionShape3D child.
+## This is required so the player raycast can hit the prop for harvesting.
+func test_all_props_have_static_body_with_collision() -> void:
+	for path in PROP_PATHS:
+		var packed: PackedScene = load(path)
+		if packed == null:
+			continue
+		var root := packed.instantiate()
+		var static_body := root.get_node_or_null("StaticBody3D")
+		assert_not_null(
+			static_body, "Prop must have a StaticBody3D child named StaticBody3D: %s" % path
+		)
+		if static_body != null:
+			assert_true(
+				static_body is StaticBody3D, "StaticBody3D child must be a StaticBody3D: %s" % path
+			)
+			var col_shape := static_body.get_node_or_null("CollisionShape3D")
+			assert_not_null(col_shape, "StaticBody3D must have a CollisionShape3D child: %s" % path)
+			if col_shape != null:
+				assert_true(
+					col_shape is CollisionShape3D,
+					"CollisionShape3D child must be CollisionShape3D: %s" % path
+				)
+				assert_not_null(
+					col_shape.shape, "CollisionShape3D must have a shape set: %s" % path
+				)
+		root.queue_free()
+
+
+## Verify each prop has a Harvestable child with at least one drop defined.
+func test_all_props_have_harvestable_with_drops() -> void:
+	for path in PROP_PATHS:
+		var packed: PackedScene = load(path)
+		if packed == null:
+			continue
+		var root := packed.instantiate()
+		var harvestable := root.get_node_or_null("Harvestable")
+		assert_not_null(harvestable, "Prop must have a child named Harvestable: %s" % path)
+		if harvestable != null:
+			assert_true(
+				harvestable.has_method("get") or harvestable.get_script() != null,
+				"Harvestable child must have a script attached: %s" % path
+			)
+			var drops = harvestable.get("drops")
+			assert_not_null(drops, "Harvestable must have a drops property: %s" % path)
+			if drops != null:
+				assert_true(drops.size() > 0, "Harvestable drops must not be empty: %s" % path)
+		root.queue_free()
+
+
 ## Verify every material that declares itself emissive actually has
 ## emission_enabled = true and a positive emission_energy_multiplier.
 func test_all_emissive_materials_have_emission_enabled() -> void:

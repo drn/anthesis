@@ -1,0 +1,26 @@
+[gd_resource type="Resource" script_class="Recipe" load_steps=6 format=3]
+
+[ext_resource type="Script" path="res://scripts/core/items/recipe.gd" id="1"]
+[ext_resource type="Script" path="res://scripts/core/items/item_amount.gd" id="2"]
+
+[sub_resource type="Resource" id="input_1"]
+script = ExtResource("2")
+item_id = &"soil"
+count = 4
+
+[sub_resource type="Resource" id="input_2"]
+script = ExtResource("2")
+item_id = &"crystal_shard"
+count = 1
+
+[sub_resource type="Resource" id="output_1"]
+script = ExtResource("2")
+item_id = &"bloom_brick"
+count = 2
+
+[resource]
+script = ExtResource("1")
+id = &"bloom_brick"
+display_name = "Bloom Brick"
+inputs = Array[ExtResource("2")]([SubResource("input_1"), SubResource("input_2")])
+output = SubResource("output_1")

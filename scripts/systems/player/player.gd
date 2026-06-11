@@ -16,6 +16,10 @@ signal dig_requested(world_pos: Vector3, radius: float)
 ## Emitted when the player requests to place voxels at a world position.
 signal place_requested(world_pos: Vector3, radius: float)
 
+## Emitted when the player interacts with a harvestable prop.
+## target is the prop's root Node; drops is its Array[ItemAmount].
+signal harvest_requested(target: Node, drops: Array[ItemAmount])
+
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
@@ -74,6 +78,10 @@ func _unhandled_input(event: InputEvent) -> void:
 		var action_toggle := "toggle_mouse_capture"
 		if InputMap.has_action(action_toggle) and event.is_action_pressed(action_toggle):
 			_release_mouse()
+
+		var action_interact := "interact"
+		if InputMap.has_action(action_interact) and event.is_action_pressed(action_interact):
+			_try_harvest()
 
 
 func _input(event: InputEvent) -> void:
@@ -158,6 +166,20 @@ func _try_place() -> void:
 	var normal := _raycast.get_collision_normal()
 	# Build outward from the hit face so the new voxel sits outside the surface.
 	place_requested.emit(hit + normal * 0.5, PLACE_RADIUS)
+
+
+func _try_harvest() -> void:
+	if _raycast == null or not _raycast.is_colliding():
+		return
+	# Walk up the collider owner chain looking for a Harvestable child.
+	var collider := _raycast.get_collider()
+	var candidate: Node = collider
+	while candidate != null:
+		var harvestable := candidate.get_node_or_null("Harvestable")
+		if harvestable != null and harvestable is Harvestable:
+			harvest_requested.emit(candidate, harvestable.drops)
+			return
+		candidate = candidate.get_parent()
 
 
 # ---------------------------------------------------------------------------

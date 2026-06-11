@@ -77,10 +77,13 @@ See `docs/ARCHITECTURE.md` for the full design.
 ## Directory Layout
 
 ```
-scenes/              Godot scene files (.tscn)
-scripts/core/        Engine-level systems (world, voxels, commands)
-scripts/systems/     Gameplay systems (magic, crafting, flora, biomes)
-scripts/ui/          UI scripts
+scenes/              Godot scene files (.tscn) — incl. scenes/ui/ (hud, inventory_panel)
+scripts/core/        Engine-level systems (world, voxels, commands, items)
+scripts/core/items/  Item/recipe data contracts (ItemDef, ItemAmount, Recipe)
+scripts/systems/     Gameplay systems (items, inventory, crafting, flora, biomes)
+scripts/ui/          UI scripts (hud, inventory_panel)
+resources/items/     Item .tres definitions (soil, crystal_shard, …)
+resources/recipes/   Crafting recipe .tres files (bloom_brick, lumen_torch)
 resources/           Data resources (.tres) — items, recipes, flora, biomes
 shaders/             GLSL / Godot shaders
 assets/              Art, audio, fonts (binary, gitignored if large)
