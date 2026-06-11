@@ -52,6 +52,7 @@ Every doc, what it covers, and when to read it:
 | Doc | Covers |
 |-----|--------|
 | `README.md` | Project status, screenshot gallery, controls, quick start |
+| `docs/GAMEPLAY.md` | Player-facing guide — items, recipes, abilities, creatures, sequencer how-to. Update when gameplay-visible values change |
 | `CLAUDE.md` (this file) | AI build conventions, hard rules, layout, cookbook, gotchas |
 | `AGENTS.md` | One-page mirror of the essentials for any agent |
 | `CONTRIBUTING.md` | Human contributor workflow |
