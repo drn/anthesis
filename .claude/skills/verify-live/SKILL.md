@@ -95,6 +95,13 @@ Notes on the snapshot:
   tool to judge UI detail — crop the region first. System `python3` has no PIL
   and `sips`'s crop flags fail silently; the reliable one-liner is:
   `uv run --with pillow python -c "from PIL import Image; Image.open(SRC).crop((x0,y0,x1,y1)).save(DST)"`.
+- **PR media convention.** Screenshots destined for the repo go to
+  `docs/media/<phase-or-feature>-<n>-<subject>.png`, downscaled with
+  `sips -Z 1024` to land near the repo's ~500KB norm (raw 1920x1080 grabs are
+  ~2MB). Embed in PRs with SHA-pinned `raw.githubusercontent.com` URLs (use the
+  pushed commit SHA, not a branch name) so images survive squash-merges. Note
+  the repo tracks `.png.import` sidecars — `make import` generates them; commit
+  both.
 
 ## Catching script errors
 

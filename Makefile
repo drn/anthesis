@@ -6,6 +6,11 @@ GODOT ?= tools/godot/macos_editor.app/Contents/MacOS/Godot
 GODOT_HOME ?= /tmp/anthesis-home
 GODOT_RUN = mkdir -p $(GODOT_HOME) && HOME=$(GODOT_HOME) $(GODOT)
 
+# gdtoolkit: use gdlint/gdformat from PATH when installed, else run them via
+# uvx (the CLAUDE.md-sanctioned form) so lint/format work on a fresh machine.
+GDLINT ?= $(shell command -v gdlint >/dev/null 2>&1 && echo gdlint || echo "uvx --from 'gdtoolkit==4.*' gdlint")
+GDFORMAT ?= $(shell command -v gdformat >/dev/null 2>&1 && echo gdformat || echo "uvx --from 'gdtoolkit==4.*' gdformat")
+
 .PHONY: setup edit run import test lint format format-check stems notes _ensure_import
 
 # Check that the Godot binary exists before targets that need it.
@@ -53,15 +58,15 @@ test: import
 
 ## Lint all GDScript files.
 lint:
-	find scripts tests -name "*.gd" | xargs gdlint
+	find scripts tests -name "*.gd" | xargs $(GDLINT)
 
 ## Auto-format all GDScript files.
 format:
-	find scripts tests -name "*.gd" | xargs gdformat
+	find scripts tests -name "*.gd" | xargs $(GDFORMAT)
 
 ## Check formatting without modifying files (CI-safe).
 format-check:
-	find scripts tests -name "*.gd" | xargs gdformat --check
+	find scripts tests -name "*.gd" | xargs $(GDFORMAT) --check
 
 ## Regenerate the procedural adaptive-music stems (stdlib Python, idempotent).
 stems:

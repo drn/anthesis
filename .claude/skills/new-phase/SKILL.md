@@ -3,12 +3,13 @@ name: new-phase
 description: 'Plan and execute a new feature phase for Anthesis using the proven pinned-contract parallel workflow pattern. Use when starting a new major feature or phase.'
 ---
 
-# new-phase — ship a feature phase the way phases 1-7 shipped
+# new-phase — ship a feature phase the way phases 1-9 shipped
 
 Anthesis grew from an empty project to a full voxel adventure (diggable world →
 inventory/crafting → tick + magic → combat → adaptive music → in-world sequencer
-→ co-op) across seven phases, each landed as a single squash-merged PR with a
-green 600+ test suite. They all used the same recipe. Follow it.
+→ co-op → ferromancy → tempestlight/weather) across nine phases, each landed as
+a single squash-merged PR with a green test suite (832 tests by phase 9). They
+all used the same recipe. Follow it.
 
 The core idea: **pin every interface as an explicit contract before any builder
 writes code, hand each builder a non-overlapping slice with strict file
@@ -71,9 +72,21 @@ Spin up 4-5 builders, each owning one contract slice:
 - **Sonnet** for mechanical work: `.tres` data authoring, boilerplate services,
   test scaffolding, docs.
 
-Each builder ships its unit **with passing unit tests** (Hard Rule 1) and
+Each builder writes its unit **plus its GUT tests** (Hard Rule 1) and
 **lint-clean** code, against the pinned contract — but does **not** wire into
 World. Builders prepend the Thanx security policy to any sub-sub-agent prompts.
+
+**Builders NEVER run the Godot binary** (no `make test` / `make import` /
+scratch `-s` scripts). Parallel Godot processes contend on the shared `.godot`
+import cache and corrupt it. Builders validate with gdtoolkit only
+(`uvx --from "gdtoolkit==4.*" gdformat` then `gdlint` on exactly their files);
+the integrator is the first agent to run the suite and owns making every
+builder's tests pass (phases 8-9: expect ~2-3 small test bugs per phase to
+surface there — off-by-ones, deferred `queue_free`, spy-state spill).
+
+**Contract delivery:** write the pinned contracts to an absolute path readable
+by every agent (e.g. `/tmp/phase<N>_contracts.md`) and reference that path in
+each builder prompt — don't paste the whole contract into every prompt.
 
 ### 5. Opus integrator (one agent, owns the seams)
 
@@ -111,7 +124,30 @@ code (Hard Rule 5), un-seeded RNG (Hard Rule 6), and anything touching
   image renders in the PR even before merge), then **squash-merge** onto
   `master` (Hard Rule 8).
 
-## Failure modes seen across phases 1-7 (check for these)
+### Orchestrating with the Workflow tool (how phases 8-9 ran)
+
+Phases 8-9 ran this recipe as a single background Workflow per phase with four
+sequential stages — `Build` (4-5 builders via `parallel()`, model-matched),
+`Integrate` (one Opus agent receiving all builder reports), `Docs` (one Sonnet
+agent receiving the integrator report), `Skeptic` (one Opus agent with veto) —
+while the orchestrator did the scouting, contract authoring, git/PR work, and
+artifact registration outside the workflow. A dedicated docs stage between
+integrator and skeptic works better than folding docs into the integrator: the
+skeptic then cross-checks docs numbers against `.tres` ground truth as part of
+its sweep.
+
+### world.gd size budget (gdlintrc ceiling + the rig pattern)
+
+A repo-root `gdlintrc` caps `max-file-lines` at 1200 and `world.gd` lives near
+it. **Do not raise the ceiling.** Each new phase extracts its wiring into a
+dedicated integrator-owned rig — `scripts/systems/world/<phase>_rig.gd`
+(precedent: `FerromancyRig`, `TempestRig`) — that builds/wires the phase's
+nodes, owns its tick handlers and ability-effect callables, and publishes onto
+the `WorldContext`. World stays the thin composition root with **zero new
+public methods** (it is at the 20-method gdlint cap; tests reach non-getter
+systems via named child nodes or `world.get("_field")`).
+
+## Failure modes seen across phases 1-9 (check for these)
 
 - **int64 literals.** Seeds like `20260610` are fine, but bit-twiddling /
   hashing that overflows 32-bit wraps silently. Keep seed math inside
@@ -135,6 +171,17 @@ code (Hard Rule 5), un-seeded RNG (Hard Rule 6), and anything touching
 - **Parallel-agent file collisions.** The single biggest source of merge pain —
   prevented entirely by strict file ownership and keeping `project.godot` /
   `world.gd` integrator-only (step 3).
+- **Parallel Godot runs corrupt `.godot`.** Builders running `make import`/
+  `make test` concurrently in the shared worktree race on the import cache.
+  Builders lint-only; integrator runs the suite (step 4).
+- **Alphabetical hotbar reshuffle.** `AbilityRegistry.abilities()` sorts by id,
+  so adding an ability re-orders every cast slot. Pin the new full slot order
+  in the contract, extend `cast_N` input actions + the player's hotkey loop,
+  and update GAMEPLAY.md's table — registry-count test assertions break too.
+- **Stat-modifier overwrites.** Two statuses both setting `player.speed_scale`
+  directly corrupt each other on expiry. Route all multipliers through
+  `world.gd`'s `_speed_mods` product table (phase 9 precedent) — never set the
+  player field from an effect callable.
 - **`height_at` returns NAN.** Terrain streams asynchronously; position-dependent
   logic must gate on `not is_nan(...)`. Bit the player-placement code until World
   learned to park at a safe altitude and poll.

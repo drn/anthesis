@@ -303,7 +303,14 @@ Traps seen building phases 1-8. Check these before debugging from scratch:
 Argus orchestrates dynamic multi-agent workflows for this repo:
 
 - **Fable** — top-level orchestrator; coordinates agents and workflows.
-- **Opus sub-agents** — complex / novel work: shaders, terrain algorithms, voxel simulation, novel systems design.
+- **Opus sub-agents** — complex / novel work: shaders, terrain algorithms, voxel simulation, novel systems design, integration, skeptic review.
 - **Sonnet sub-agents** — mechanical work: boilerplate, data authoring (.tres), documentation, test scaffolding.
+
+The proven phase pipeline (see `.claude/skills/new-phase`): parallel builders →
+integrator → docs writer → skeptic, all against a pinned contract file. Two
+iron rules for parallel agents in this worktree: **only one agent may run the
+Godot binary at a time** (concurrent runs corrupt the shared `.godot` import
+cache — builders validate with `uvx gdtoolkit` lint/format only), and
+**`project.godot` / `world.gd` / `player.gd` belong to the integrator alone**.
 
 See also: `CONTRIBUTING.md`
