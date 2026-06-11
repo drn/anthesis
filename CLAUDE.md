@@ -208,6 +208,9 @@ Traps seen building phases 1-7. Check these before debugging from scratch:
   directory must exist first — Godot segfaults in `RotatedFileLogger` when it
   cannot create `user://logs` (e.g. sandboxed writes to the real home), so
   `mkdir -p /tmp/anthesis-home` before any direct invocation.
+- **`make setup` before anything in a fresh worktree.** `tools/` is gitignored,
+  so a new worktree has no Godot binary — every `make` target that invokes the
+  editor fails with exit 1 until `make setup` downloads it.
 - **`--import` first.** A fresh worktree has no `.godot/imported/` cache. Run
   `make import` (or `<binary> --headless --path . --import`) before the first
   test run or after adding any `.tres` / asset, or you get missing-import errors.

@@ -91,6 +91,10 @@ Notes on the snapshot:
 - **Register artifacts.** Screenshots you produce for a PR or for the caller
   should be registered as artifacts (via `artifact_register`) so the
   orchestrator surfaces them — don't leave them only in `/tmp`.
+- **Inspecting HUD detail.** A full 1920x1080 PNG is too downscaled in the Read
+  tool to judge UI detail — crop the region first. System `python3` has no PIL
+  and `sips`'s crop flags fail silently; the reliable one-liner is:
+  `uv run --with pillow python -c "from PIL import Image; Image.open(SRC).crop((x0,y0,x1,y1)).save(DST)"`.
 
 ## Catching script errors
 
