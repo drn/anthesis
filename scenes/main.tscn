@@ -1,6 +1,9 @@
-[gd_scene load_steps=2 format=3 uid="uid://anthesis_main"]
+[gd_scene load_steps=3 format=3 uid="uid://anthesis_main"]
 
 [ext_resource type="Script" path="res://scripts/core/main.gd" id="1_main"]
+[ext_resource type="PackedScene" uid="uid://anthesis_world" path="res://scenes/world/world.tscn" id="2_world"]
 
 [node name="Main" type="Node3D"]
 script = ExtResource("1_main")
+
+[node name="World" parent="." instance=ExtResource("2_world")]

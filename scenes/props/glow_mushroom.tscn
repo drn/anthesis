@@ -1,0 +1,79 @@
+[gd_scene load_steps=9 format=3]
+
+[sub_resource type="StandardMaterial3D" id="Mat_cap"]
+albedo_color = Color(0.05, 0.6, 0.55, 1)
+emission_enabled = true
+emission = Color(0.1, 0.9, 0.85, 1)
+emission_energy_multiplier = 2.5
+roughness = 0.45
+metallic = 0.05
+rim_enabled = true
+rim = 0.4
+rim_tint = 0.2
+
+[sub_resource type="StandardMaterial3D" id="Mat_stem"]
+albedo_color = Color(0.45, 0.35, 0.25, 1)
+emission_enabled = false
+roughness = 0.8
+metallic = 0.0
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_stem"]
+top_radius = 0.08
+bottom_radius = 0.12
+height = 0.7
+radial_segments = 8
+rings = 1
+
+[sub_resource type="SphereMesh" id="SphereMesh_cap"]
+radius = 0.38
+height = 0.46
+radial_segments = 12
+rings = 6
+is_hemisphere = false
+
+[sub_resource type="Animation" id="Animation_pulse"]
+resource_name = "pulse"
+length = 2.4
+loop_mode = 1
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Cap:scale")
+tracks/0/interp = 2
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0.0, 1.2, 2.4),
+"transitions": PackedFloat32Array(1.0, 1.0, 1.0),
+"update": 0,
+"values": [Vector3(1.0, 1.0, 1.0), Vector3(1.04, 1.04, 1.04), Vector3(1.0, 1.0, 1.0)]
+}
+
+[sub_resource type="AnimationLibrary" id="AnimationLibrary_0"]
+_data = {
+"pulse": SubResource("Animation_pulse")
+}
+
+[node name="GlowMushroom" type="Node3D"]
+
+[node name="Stem" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.35, 0)
+mesh = SubResource("CylinderMesh_stem")
+surface_material_override/0 = SubResource("Mat_stem")
+
+[node name="Cap" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.6, 0, 0, 0, 1, 0, 0.83, 0)
+mesh = SubResource("SphereMesh_cap")
+surface_material_override/0 = SubResource("Mat_cap")
+
+[node name="CapLight" type="OmniLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)
+light_color = Color(0.1, 0.9, 0.85, 1)
+light_energy = 1.2
+omni_range = 6.0
+shadow_enabled = false
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="."]
+libraries = {
+"": SubResource("AnimationLibrary_0")
+}
+autoplay = "pulse"

@@ -1,0 +1,59 @@
+[gd_scene load_steps=8 format=3 uid="uid://anthesis_presentation_sandbox"]
+
+[ext_resource type="PackedScene" path="res://scenes/world/environment.tscn" id="1_env_rig"]
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_ground"]
+size = Vector2(120, 120)
+
+[sub_resource type="StandardMaterial3D" id="Mat_ground"]
+albedo_color = Color(0.08, 0.07, 0.12, 1)
+metallic = 0.1
+roughness = 0.85
+
+[sub_resource type="SphereMesh" id="SphereMesh_test"]
+radius = 1.5
+height = 3.0
+
+[sub_resource type="StandardMaterial3D" id="Mat_cyan"]
+albedo_color = Color(0.1, 0.9, 0.95, 1)
+emission_enabled = true
+emission = Color(0.1, 0.9, 0.95, 1)
+emission_energy_multiplier = 2.5
+
+[sub_resource type="StandardMaterial3D" id="Mat_magenta"]
+albedo_color = Color(0.9, 0.2, 0.8, 1)
+emission_enabled = true
+emission = Color(0.9, 0.2, 0.8, 1)
+emission_energy_multiplier = 2.5
+
+[sub_resource type="StandardMaterial3D" id="Mat_violet"]
+albedo_color = Color(0.55, 0.4, 0.95, 1)
+emission_enabled = true
+emission = Color(0.55, 0.4, 0.95, 1)
+emission_energy_multiplier = 2.5
+
+[node name="PresentationSandbox" type="Node3D"]
+
+[node name="EnvironmentRig" parent="." instance=ExtResource("1_env_rig")]
+
+[node name="Ground" type="MeshInstance3D" parent="."]
+mesh = SubResource("PlaneMesh_ground")
+surface_material_override/0 = SubResource("Mat_ground")
+
+[node name="SphereCyan" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5, 1.5, 0)
+mesh = SubResource("SphereMesh_test")
+surface_material_override/0 = SubResource("Mat_cyan")
+
+[node name="SphereMagenta" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5, 0)
+mesh = SubResource("SphereMesh_test")
+surface_material_override/0 = SubResource("Mat_magenta")
+
+[node name="SphereViolet" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5, 1.5, 0)
+mesh = SubResource("SphereMesh_test")
+surface_material_override/0 = SubResource("Mat_violet")
+
+[node name="Camera3D" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.965926, 0.258819, 0, -0.258819, 0.965926, 0, 4, 14)

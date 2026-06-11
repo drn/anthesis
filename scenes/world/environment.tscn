@@ -1,0 +1,22 @@
+[gd_scene load_steps=2 format=3 uid="uid://anthesis_environment_rig"]
+
+[ext_resource type="Environment" path="res://resources/environment/world_env.tres" id="1_env"]
+
+[node name="Environment_Rig" type="Node3D"]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = ExtResource("1_env")
+
+[node name="Moonlight" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.766044, -0.219846, 0.604023, 0, 0.939693, 0.342020, -0.642788, -0.262003, 0.719846, 0, 12, 0)
+light_color = Color(0.7, 0.8, 1, 1)
+light_energy = 0.35
+shadow_enabled = true
+shadow_blur = 1.5
+directional_shadow_mode = 2
+
+[node name="WarmFill" type="DirectionalLight3D" parent="."]
+transform = Transform3D(-0.766044, -0.150384, 0.624695, 0, 0.972370, 0.233445, -0.642788, 0.178834, -0.745417, 0, 12, 0)
+light_color = Color(0.95, 0.55, 0.85, 1)
+light_energy = 0.08
+shadow_enabled = false

@@ -1,0 +1,8 @@
+[gd_scene load_steps=2 format=3 uid="uid://anthesis_terrain"]
+
+[ext_resource type="Script" path="res://scripts/systems/terrain/voxel_world.gd" id="1_voxelworld"]
+
+[node name="VoxelWorld" type="Node3D"]
+script = ExtResource("1_voxelworld")
+
+[node name="VoxelLodTerrain" type="VoxelLodTerrain" parent="."]
