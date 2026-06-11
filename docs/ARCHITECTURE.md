@@ -84,6 +84,26 @@ Benefits:
 
 Location: `resources/<category>/` (e.g., `resources/items/`, `resources/biomes/`).
 
+### Phase 2 — Items, Inventory, and Crafting (live)
+
+The first data-driven content shipped as part of Phase 2:
+
+- **Contracts** (`scripts/core/items/`): `ItemDef`, `ItemAmount`, `Recipe` — plain
+  `Resource` types holding ids, stack sizes, swatch colors, and recipe I/O.
+- **Content** (`resources/items/`, `resources/recipes/`): the six starter items
+  (soil, crystal_shard, glow_spore, lumen_petal, bloom_brick, lumen_torch) and two
+  recipes (bloom_brick, lumen_torch) as `.tres` files — no game data in code.
+- **Catalog** (`ItemRegistry`): scans those dirs at boot and resolves ids → defs/recipes.
+- **State** (`Inventory`): a fixed 24-slot, stack-aware container that emits `changed`.
+- **Logic** (`CraftingService`, `LootService`): crafting is atomic (inputs are never
+  consumed unless the output fits); dig/harvest loot is deterministic, derived from the
+  `WorldSeed` "loot" stream so identical actions always yield identical drops.
+
+All mutations route through the command layer: `DigCommand` awards dig loot,
+`HarvestCommand` awards harvest drops then frees the prop, and `CraftCommand` runs a
+recipe. The HUD (`scripts/ui/`) is pure presentation — it reads inventory state and
+defers crafting back to `World` via a callback, which submits a `CraftCommand` to the bus.
+
 ---
 
 ## Systems as Autonomous Modules

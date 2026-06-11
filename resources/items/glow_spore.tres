@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="ItemDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/core/items/item_def.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"glow_spore"
+display_name = "Glow Spore"
+max_stack = 99
+category = &"material"
+swatch_color = Color(0.0, 0.9, 0.85, 1)
+description = "Bioluminescent spore puffed from a glow mushroom cap. The cyan mist clings to fingertips and slowly fades — but the faint warmth lingers for hours."

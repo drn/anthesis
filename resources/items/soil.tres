@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="ItemDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/core/items/item_def.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"soil"
+display_name = "Soil"
+max_stack = 99
+category = &"material"
+swatch_color = Color(0.38, 0.22, 0.42, 1)
+description = "Violet-dark loam scooped from the cosmic earth. Smells faintly of starlight and petrichor. Forms the bones of every structure in the deep."

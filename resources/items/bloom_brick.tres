@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="ItemDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/core/items/item_def.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"bloom_brick"
+display_name = "Bloom Brick"
+max_stack = 64
+category = &"placeable"
+swatch_color = Color(0.6, 0.45, 0.85, 1)
+description = "Compressed cosmic soil fused with crystal dust, pressed into a smooth lavender block. Sturdy enough to build, luminous enough to never feel alone in the dark."

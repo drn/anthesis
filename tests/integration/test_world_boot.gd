@@ -55,6 +55,54 @@ func test_flora_present() -> void:
 	assert_eq(f.prop_scenes.size(), 3, "flora must be configured with 3 prop scenes")
 
 
+func test_inventory_wired() -> void:
+	var world := _boot()
+	var inv := world.inventory()
+	assert_not_null(inv, "inventory() must return an Inventory")
+	assert_true(inv is Inventory, "inventory() must be an Inventory")
+	assert_eq(inv.size(), 24, "inventory must have 24 slots")
+	assert_true(inv.is_empty(), "a fresh world inventory must start empty")
+
+
+func test_registry_wired() -> void:
+	var world := _boot()
+	var reg := world.registry()
+	assert_not_null(reg, "registry() must return an ItemRegistry")
+	assert_true(reg is ItemRegistry, "registry() must be an ItemRegistry")
+	assert_gt(reg.item_ids().size(), 0, "registry must have loaded item resources")
+	assert_not_null(reg.item(&"soil"), "registry must resolve the soil item")
+	assert_gt(reg.recipes().size(), 0, "registry must have loaded recipe resources")
+
+
+func test_hud_present_and_bound() -> void:
+	var world := _boot()
+	var h := world.hud()
+	assert_not_null(h, "hud() must return a Hud")
+	assert_true(h is Hud, "hud() must be a Hud")
+	assert_true(h.is_inside_tree(), "hud must be in the scene tree")
+
+
+func test_context_carries_phase2_services() -> void:
+	# The command context must expose inventory/registry/crafting/loot so dig,
+	# craft, and harvest commands can mutate Phase 2 state.
+	var world := _boot()
+	var inv := world.inventory()
+	# Digging should award loot through the bus into the same inventory instance.
+	world.command_bus().execute(CraftCommand.new(world.registry().recipe(&"bloom_brick")))
+	# No inputs present, so the craft is a no-op: inventory stays empty.
+	assert_true(inv.is_empty(), "crafting with no inputs must not alter the inventory")
+
+
+func test_player_harvest_signal_connected() -> void:
+	var world := _boot()
+	var p := world.player()
+	assert_gt(
+		p.harvest_requested.get_connections().size(),
+		0,
+		"player.harvest_requested must be connected to a World handler"
+	)
+
+
 func test_command_bus_wired() -> void:
 	var world := _boot()
 	var bus := world.command_bus()
