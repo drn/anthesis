@@ -2,8 +2,8 @@
 
 [resource]
 resource_name = "AnthesisTerrain"
-albedo_color = Color(0.13, 0.12, 0.18, 1)
-roughness = 0.9
+albedo_color = Color(0.32, 0.3, 0.44, 1)
+roughness = 0.85
 metallic = 0.0
 metallic_specular = 0.35
 uv1_triplanar = true

@@ -75,8 +75,8 @@ surface_material_override/0 = SubResource("Mat_crystal")
 [node name="CrystalLight" type="OmniLight3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
 light_color = Color(0.4, 0.2, 1.0, 1)
-light_energy = 1.4
-omni_range = 7.0
+light_energy = 3.0
+omni_range = 11.0
 shadow_enabled = false
 
 [node name="AnimationPlayer" type="AnimationPlayer" parent="."]

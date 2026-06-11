@@ -23,7 +23,7 @@ const PLAYER_SAFE_ALTITUDE := 220.0
 const TERRAIN_POLL_TIMEOUT := 20.0
 
 ## Flora tuning (contract #8 integration defaults).
-const FLORA_COUNT := 90
+const FLORA_COUNT := 150
 const FLORA_AREA_EXTENT := 55.0
 
 const _TERRAIN_SCENE := preload("res://scenes/world/terrain.tscn")
