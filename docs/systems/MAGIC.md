@@ -86,11 +86,19 @@ the per-ability last-cast-tick map and enforces the rule gate.
 signal cast_succeeded(ability: AbilityDef)
 signal cast_failed(ability: AbilityDef, reason: StringName)
 
-func _init(well: LumenWell, clock_tick: Callable)
+func _init(wells: Variant, clock_tick: Callable)
+    # wells: either a LumenWell (legacy — all abilities share it) or a
+    # Callable(kind: StringName) -> LumenWell resolver (Phase 8+ multi-well).
 func can_cast(ability: AbilityDef) -> bool
 func cooldown_remaining(ability: AbilityDef) -> int
 func try_cast(ability: AbilityDef, effect: Callable) -> bool
 ```
+
+The resolver maps `ability.resource_kind` (empty → `&"lumen"`) to a well. A
+resolver returning null for a kind makes that ability unaffordable. In `world.gd`,
+`&"lumen"` maps to `_well` and each metal kind maps to
+`_metal_reserves.well(kind)`. See `docs/systems/METALLURGY.md` for the full
+metal-well setup.
 
 ### Rule Gate Semantics
 
@@ -126,13 +134,16 @@ kind have independent cooldowns.
 | `swatch_color` | `Color` | blue |
 | `description` | `String` | flavor text |
 
-Three abilities ship:
+Five abilities ship (Phase 3 + Phase 8). Phase 8 abilities use `resource_kind`
+to spend from a metal reserve rather than the lumen well:
 
-| id | kind | cost | cooldown | magnitude |
-|----|------|------|----------|-----------|
-| `shape_burst` | `shape_burst` | 25 | 30 | 4.0 (carve radius) |
-| `lumen_bloom` | `lumen_bloom` | 15 | 20 | 6.0 (light radius) |
-| `skyward` | `skyward` | 10 | 15 | 14.0 (impulse m/s) |
+| id | kind | resource_kind | cost | cooldown | magnitude |
+|----|------|--------------|------|----------|-----------|
+| `ferro_pull` | `ferro_pull` | `&"iron"` | 12 | 8 | 9.0 |
+| `ferro_push` | `ferro_push` | `&"steel"` | 12 | 8 | 11.0 |
+| `lumen_bloom` | `lumen_bloom` | `&"lumen"` | 15 | 20 | 6.0 (light radius) |
+| `shape_burst` | `shape_burst` | `&"lumen"` | 25 | 30 | 4.0 (carve radius) |
+| `skyward` | `skyward` | `&"lumen"` | 10 | 15 | 14.0 (impulse m/s) |
 
 `kind` is the dispatch key for `WorldContext.ability_effects`. One ability can
 share a `kind` with another if both should invoke the same effect Callable.
@@ -153,8 +164,8 @@ func ability_ids() -> Array[StringName]        # sorted alphabetically
 ```
 
 Abilities returned by `abilities()` are sorted by id (alphabetical). With the
-current three abilities the stable hotkey order is: `lumen_bloom` (1), `shape_burst`
-(2), `skyward` (3).
+current five abilities the stable hotkey order is: `ferro_pull` (1), `ferro_push`
+(2), `lumen_bloom` (3), `shape_burst` (4), `skyward` (5).
 
 ---
 
@@ -181,6 +192,8 @@ Player.cast_requested(slot, target)
         -> CommandRouter.submit
             -> CommandBus.execute (client-local, not replicated)
                 -> CastCommand.apply(ctx)
+                    -> ctx.metal_reserves.ensure_for_cost(ability, ctx.inventory)
+                       [auto-swallow flakes from inventory if ability.resource_kind != &"lumen"]
                     -> ctx.ability_effects.get(ability.kind)  -> effect Callable or null
                     -> ctx.magic.try_cast(ability, lambda)
                         [gate: cooldown -> cost -> effect]
@@ -281,3 +294,11 @@ gather hook.
   `cast_failed(&"no_effect")` silently — check `ctx.ability_effects` wiring first.
 - `AbilityRegistry` sorts by `id`, so hotkey order depends on alphabetical ordering
   of ability ids. Name new abilities accordingly if position matters.
+- **`resource_kind` defaults to `&"lumen"`.** Existing `.tres` files have no
+  `resource_kind` field; the export default applies. Do not add the field to
+  lumen abilities — leave it absent or explicitly `&"lumen"`.
+- **Metal abilities auto-swallow before the gate.** `CastCommand` calls
+  `ctx.metal_reserves.ensure_for_cost(ability, ctx.inventory)` before `try_cast`.
+  This means flakes disappear silently from inventory at cast time. The cost gate
+  (`cast_failed(&"cost")`) fires only if the well is *still* unaffordable after
+  auto-swallow — i.e., the inventory was empty.

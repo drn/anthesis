@@ -5,9 +5,31 @@ extends GutTest
 # ---------------------------------------------------------------------------
 
 const EXPECTED_ITEM_IDS := [
-	&"soil", &"crystal_shard", &"glow_spore", &"lumen_petal", &"bloom_brick", &"lumen_torch"
+	&"soil",
+	&"crystal_shard",
+	&"glow_spore",
+	&"lumen_petal",
+	&"bloom_brick",
+	&"lumen_torch",
+	&"lodestone_ore",
+	&"skysteel_ore",
+	&"vigorite_ore",
+	&"keenglass_shard",
+	&"iron_flakes",
+	&"steel_flakes",
+	&"pewter_flakes",
+	&"tin_flakes",
+	&"ferric_coin",
 ]
-const EXPECTED_RECIPE_IDS := [&"bloom_brick", &"lumen_torch"]
+const EXPECTED_RECIPE_IDS := [
+	&"bloom_brick",
+	&"lumen_torch",
+	&"iron_flakes",
+	&"steel_flakes",
+	&"pewter_flakes",
+	&"tin_flakes",
+	&"ferric_coin",
+]
 
 # ---------------------------------------------------------------------------
 # Scanning real resource directories

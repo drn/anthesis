@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/systems/magic/ferric_coin.gd" id="FerricCoin_script"]
+
+[node name="FerricCoin" type="RigidBody3D"]
+script = ExtResource("FerricCoin_script")

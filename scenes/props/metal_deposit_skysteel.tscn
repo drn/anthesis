@@ -1,0 +1,73 @@
+[gd_scene load_steps=14 format=3]
+
+[ext_resource type="Script" path="res://scripts/systems/flora/metal_deposit.gd" id="MetalDeposit_script"]
+[ext_resource type="Script" path="res://scripts/systems/flora/harvestable.gd" id="Harvestable_script"]
+[ext_resource type="Script" path="res://scripts/core/items/item_amount.gd" id="ItemAmount_script"]
+
+[sub_resource type="StandardMaterial3D" id="Mat_skysteel"]
+albedo_color = Color(0.7, 0.75, 0.82, 1)
+emission_enabled = true
+emission = Color(0.6, 0.65, 0.75, 1)
+emission_energy_multiplier = 1.0
+roughness = 0.15
+metallic = 0.9
+
+[sub_resource type="PrismMesh" id="PrismMesh_0"]
+size = Vector3(0.22, 0.65, 0.22)
+
+[sub_resource type="PrismMesh" id="PrismMesh_1"]
+size = Vector3(0.18, 0.5, 0.18)
+
+[sub_resource type="PrismMesh" id="PrismMesh_2"]
+size = Vector3(0.15, 0.42, 0.15)
+
+[sub_resource type="PrismMesh" id="PrismMesh_3"]
+size = Vector3(0.12, 0.35, 0.12)
+
+[sub_resource type="SphereShape3D" id="SphereShape3D_skysteel"]
+radius = 0.9
+
+[sub_resource type="Resource" id="Drop_skysteel_1"]
+script = ExtResource("ItemAmount_script")
+item_id = &"skysteel_ore"
+count = 2
+
+[node name="MetalDepositSkysteel" type="StaticBody3D"]
+script = ExtResource("MetalDeposit_script")
+
+[node name="Crystal0" type="MeshInstance3D" parent="."]
+transform = Transform3D(0.906, 0.423, 0, -0.423, 0.906, 0, 0, 0, 1, 0, 0.32, 0)
+mesh = SubResource("PrismMesh_0")
+surface_material_override/0 = SubResource("Mat_skysteel")
+
+[node name="Crystal1" type="MeshInstance3D" parent="."]
+transform = Transform3D(0.978, -0.208, 0, 0.208, 0.978, 0, 0, 0, 1, 0.2, 0.24, 0.1)
+mesh = SubResource("PrismMesh_1")
+surface_material_override/0 = SubResource("Mat_skysteel")
+
+[node name="Crystal2" type="MeshInstance3D" parent="."]
+transform = Transform3D(0.848, 0.530, 0, -0.530, 0.848, 0, 0, 0, 1, -0.18, 0.2, 0.09)
+mesh = SubResource("PrismMesh_2")
+surface_material_override/0 = SubResource("Mat_skysteel")
+
+[node name="Crystal3" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.978, 0.208, 0, -0.208, 0.978, 0.12, 0.18, -0.14)
+mesh = SubResource("PrismMesh_3")
+surface_material_override/0 = SubResource("Mat_skysteel")
+
+[node name="DepositLight" type="OmniLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
+light_color = Color(0.85, 0.88, 0.95, 1)
+light_energy = 2.0
+omni_range = 8.0
+shadow_enabled = false
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.4, 0)
+shape = SubResource("SphereShape3D_skysteel")
+
+[node name="Harvestable" type="Node" parent="."]
+script = ExtResource("Harvestable_script")
+drops = Array[ExtResource("ItemAmount_script")]([SubResource("Drop_skysteel_1")])
+prompt = "Mine"
+lumen = 4.0

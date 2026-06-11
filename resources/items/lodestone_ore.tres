@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="ItemDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/core/items/item_def.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"lodestone_ore"
+display_name = "Lodestone Ore"
+max_stack = 64
+category = &"material"
+swatch_color = Color(0.3, 0.45, 0.7, 1)
+description = "A chunk of raw iron ore shot through with faint magnetic currents. The lines of force are invisible to the eye but sing to investiture-attuned fingers — an echo of the planet's deep ferromagnetic core."

@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="Recipe" load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://scripts/core/items/recipe.gd" id="1"]
+[ext_resource type="Script" path="res://scripts/core/items/item_amount.gd" id="2"]
+
+[sub_resource type="Resource" id="input_1"]
+script = ExtResource("2")
+item_id = &"skysteel_ore"
+count = 1
+
+[sub_resource type="Resource" id="output_1"]
+script = ExtResource("2")
+item_id = &"steel_flakes"
+count = 2
+
+[resource]
+script = ExtResource("1")
+id = &"steel_flakes"
+display_name = "Steel Flakes"
+inputs = Array[ExtResource("2")]([SubResource("input_1")])
+output = SubResource("output_1")

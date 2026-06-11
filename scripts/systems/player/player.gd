@@ -43,6 +43,18 @@ signal block_interact_requested(target: Node)
 ## or "sequencer_cores".  target is the block's root Node.
 signal block_remove_requested(target: Node)
 
+## Emitted when the player toggles a burning channel (Phase 8): G -> &"vigor"
+## (pewter), T -> &"keensight" (tin). World routes it through a ToggleChannelCommand.
+signal channel_toggle_requested(channel_id: StringName)
+
+## Emitted on flare key (Shift) press and release: active is true while held.
+## Echo-guarded so auto-repeat does not re-fire it. Drives the flare multiplier.
+signal flare_changed(active: bool)
+
+## Emitted when the player throws a ferric coin (Q). origin is just ahead of the
+## camera; velocity is the camera forward * FerricCoin.THROW_SPEED.
+signal throw_coin_requested(origin: Vector3, velocity: Vector3)
+
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
@@ -58,6 +70,11 @@ const STRIKE_REACH := 2.8
 ## User-adjustable mouse-look multiplier on top of MOUSE_SENSITIVITY.
 ## World pushes GameSettings.mouse_sensitivity into this.
 var sensitivity_scale := 1.0
+
+## Movement-speed multiplier driven by status effects (Phase 8): Vigor (pewter)
+## raises it to 1.4, the pewter-drag crash drops it to 0.6, otherwise 1.0. World
+## sets this through the StatusEffectSystem's apply/expire callables.
+var speed_scale := 1.0
 
 # ---------------------------------------------------------------------------
 # Node references (assigned in _ready)
@@ -121,10 +138,30 @@ func _unhandled_input(event: InputEvent) -> void:
 		if InputMap.has_action(action_place_note) and event.is_action_pressed(action_place_note):
 			_try_place_block(&"note_block")
 
-		for slot in [1, 2, 3]:
+		var action_vigor := "burn_vigor"
+		if InputMap.has_action(action_vigor) and event.is_action_pressed(action_vigor):
+			channel_toggle_requested.emit(&"vigor")
+
+		var action_keensight := "burn_keensight"
+		if InputMap.has_action(action_keensight) and event.is_action_pressed(action_keensight):
+			channel_toggle_requested.emit(&"keensight")
+
+		var action_throw := "throw_coin"
+		if InputMap.has_action(action_throw) and event.is_action_pressed(action_throw):
+			_try_throw_coin()
+
+		for slot in [1, 2, 3, 4, 5]:
 			var action_cast := "cast_%d" % slot
 			if InputMap.has_action(action_cast) and event.is_action_pressed(action_cast):
 				cast_requested.emit(slot, _cast_target())
+
+	# Flare (Shift) is a hold: emit on press and on release, echo-guarded so
+	# keyboard auto-repeat does not re-fire it.
+	if event is InputEventKey and not event.echo and InputMap.has_action("flare"):
+		if event.is_action_pressed("flare"):
+			flare_changed.emit(true)
+		elif event.is_action_released("flare"):
+			flare_changed.emit(false)
 
 
 func _input(event: InputEvent) -> void:
@@ -182,8 +219,9 @@ func _physics_process(delta: float) -> void:
 		# Transform input relative to player yaw (not camera pitch)
 		direction = (transform.basis.x * input_dir.x + transform.basis.z * input_dir.y)
 
-	# Smooth acceleration toward target horizontal speed
-	var target_xz := direction * WALK_SPEED
+	# Smooth acceleration toward target horizontal speed. speed_scale carries the
+	# Vigor boost / pewter-drag slow (Phase 8); default 1.0 is the base walk.
+	var target_xz := direction * WALK_SPEED * speed_scale
 	velocity.x = move_toward(velocity.x, target_xz.x, WALK_SPEED * delta * 10.0)
 	velocity.z = move_toward(velocity.z, target_xz.z, WALK_SPEED * delta * 10.0)
 
@@ -277,6 +315,17 @@ func _try_strike() -> void:
 	if dist > STRIKE_REACH:
 		return
 	strike_requested.emit(collider.get_instance_id(), hit)
+
+
+## Throw a ferric coin (Q): spawn it just ahead of the camera, hurled along the
+## camera forward at [constant FerricCoin.THROW_SPEED]. World consumes one coin
+## from the inventory before spawning, so an empty pouch makes this a no-op.
+func _try_throw_coin() -> void:
+	if _camera == null:
+		return
+	var forward := -_camera.global_transform.basis.z
+	var origin := _camera.global_transform.origin + forward * 0.6
+	throw_coin_requested.emit(origin, forward * FerricCoin.THROW_SPEED)
 
 
 ## Returns the raycast hit point when colliding, otherwise a point 6 m along

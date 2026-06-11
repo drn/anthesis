@@ -37,6 +37,15 @@ func _ability(id: StringName, cost: float, cooldown: int, kind := &"shape_burst"
 	return a
 
 
+## An ability that spends from a named metal well rather than &"lumen".
+func _metal_ability(
+	id: StringName, cost: float, cooldown: int, resource_kind: StringName
+) -> AbilityDef:
+	var a := _ability(id, cost, cooldown)
+	a.resource_kind = resource_kind
+	return a
+
+
 ## A well constructed at [param capacity] and filled to the brim. The well starts
 ## empty by design (lumen is gathered, never free), so casting tests top it up.
 func _full_well(capacity := 100.0) -> LumenWell:
@@ -205,3 +214,51 @@ func test_abilities_have_independent_cooldowns() -> void:
 
 	assert_eq(magic.cooldown_remaining(burst), 30)
 	assert_eq(magic.cooldown_remaining(bloom), 20)
+
+
+# ---------------------------------------------------------------------------
+# Multi-well resolver: per-kind wells, default lumen, unknown-kind unaffordable
+# ---------------------------------------------------------------------------
+
+
+func test_resolver_spends_from_resource_kind_well() -> void:
+	var clock := FakeClock.new()
+	var lumen := _full_well(100.0)
+	var iron := _full_well(60.0)
+	var resolver := func(kind: StringName) -> LumenWell: return iron if kind == &"iron" else lumen
+	var magic := MagicSystem.new(resolver, clock.now)
+	var ability := _metal_ability(&"ferro_pull", 12.0, 8, &"iron")
+
+	var ok := magic.try_cast(ability, func() -> bool: return true)
+
+	assert_true(ok)
+	assert_eq(iron.current(), 48.0, "iron well spent")
+	assert_eq(lumen.current(), 100.0, "lumen well untouched")
+
+
+func test_resolver_defaults_empty_kind_to_lumen() -> void:
+	var clock := FakeClock.new()
+	var lumen := _full_well(100.0)
+	var iron := _full_well(60.0)
+	var resolver := func(kind: StringName) -> LumenWell: return iron if kind == &"iron" else lumen
+	var magic := MagicSystem.new(resolver, clock.now)
+	var ability := _ability(&"burst", 25.0, 30)  # resource_kind defaults &"lumen"
+
+	assert_true(magic.try_cast(ability, func() -> bool: return true))
+	assert_eq(lumen.current(), 75.0)
+	assert_eq(iron.current(), 60.0, "iron untouched by a lumen ability")
+
+
+func test_resolver_unknown_kind_is_unaffordable() -> void:
+	var clock := FakeClock.new()
+	var lumen := _full_well(100.0)
+	var resolver := func(kind: StringName) -> LumenWell: return lumen if kind == &"lumen" else null
+	var magic := MagicSystem.new(resolver, clock.now)
+	var ability := _metal_ability(&"ferro_pull", 12.0, 8, &"iron")  # resolves null
+	watch_signals(magic)
+
+	var ok := magic.try_cast(ability, func() -> bool: return true)
+
+	assert_false(ok)
+	assert_false(magic.can_cast(ability), "null well is never castable")
+	assert_signal_emitted_with_parameters(magic, "cast_failed", [ability, &"cost"])

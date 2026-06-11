@@ -184,3 +184,53 @@ func test_harvest_skips_lumen_when_lumen_zero() -> void:
 
 	assert_eq(sink.amounts.size(), 0)
 	prop.free()
+
+
+# ---------------------------------------------------------------------------
+# CastCommand — metal-reserve auto-top-up before cost gate
+# ---------------------------------------------------------------------------
+
+
+## Minimal fake for MetalReserves that records ensure_for_cost calls.
+class MetalReservesSpy:
+	extends RefCounted
+
+	var calls: Array = []
+	var result := true
+
+	func ensure_for_cost(ability: AbilityDef, inventory: Object) -> bool:
+		calls.append({"ability": ability, "inventory": inventory})
+		return result
+
+
+func test_cast_auto_tops_up_metal_before_cost_gate() -> void:
+	## When metal_reserves is wired, ensure_for_cost is called before the magic
+	## rule gate so flakes in the inventory can fund the cast.
+	var ctx := _magic_context()
+	var spy := EffectSpy.new()
+	ctx.ability_effects = {&"iron": spy.run}
+	var reserves_spy := MetalReservesSpy.new()
+	ctx.metal_reserves = reserves_spy
+	ctx.inventory = Inventory.new(24, null)
+	var ability := _ability(&"ferro_pull", &"iron", 12.0, 8)
+	watch_signals(ctx.magic)
+
+	CastCommand.new(ability, Vector3.ZERO).apply(ctx)
+
+	assert_eq(reserves_spy.calls.size(), 1)
+	assert_eq(reserves_spy.calls[0]["ability"], ability)
+	assert_eq(reserves_spy.calls[0]["inventory"], ctx.inventory)
+
+
+func test_cast_skips_top_up_when_metal_reserves_null() -> void:
+	## Null metal_reserves: must not crash; the magic gate runs as before.
+	var ctx := _magic_context()
+	var spy := EffectSpy.new()
+	ctx.ability_effects = {&"shape_burst": spy.run}
+	var ability := _ability(&"burst", &"shape_burst", 25.0, 30)
+	watch_signals(ctx.magic)
+
+	CastCommand.new(ability, Vector3.ZERO).apply(ctx)
+
+	assert_eq(spy.calls.size(), 1)
+	assert_signal_emitted(ctx.magic, "cast_succeeded")

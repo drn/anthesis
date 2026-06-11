@@ -112,15 +112,20 @@ Mutations route through the command bus. Quick map of "I want to add X":
 | Item | `resources/items/<id>.tres` (`ItemDef`) | `ItemRegistry` (auto-scans dir) | `docs/systems/CRAFTING.md` |
 | Recipe | `resources/recipes/<id>.tres` (`Recipe`) | `ItemRegistry` / `CraftingService` | `docs/systems/CRAFTING.md` |
 | Ability | `resources/abilities/<id>.tres` (`AbilityDef`) + effect `Callable` in `world.gd` `_install_ability_effects` (`kind`→fn) | `AbilityRegistry` + `MagicSystem` | `docs/systems/MAGIC.md` |
+| Metal ability | Same as Ability + set `resource_kind = &"<metal>"` on the `.tres`; add the kind → flake-id pair to `FLAKE_MAP` in `world.gd` if it's a new metal | `MagicSystem` multi-well resolver | `docs/systems/METALLURGY.md` |
+| Sustained channel | `channels.install(id, def)` in `FerromancyRig.install_channels` (def: `{resource_kind, drain_per_tick, on_start, on_stop}`) + input action in `project.godot` + player signal + route in `world.gd` | `ChannelSystem` + `StatusEffectSystem` | `docs/systems/METALLURGY.md` |
+| Metal source | Add `var metal_mass: float` + `func is_metal_anchored() -> bool` + `add_to_group(&"metal_sources")` in `_ready` to any Node3D | `FerroKinetics.select_source` (scene tree group query) | `docs/systems/METALLURGY.md` |
 | Creature | `resources/creatures/<id>.tres` (`CreatureDef`) | `CreatureRegistry` + `SpawnSystem` | `docs/systems/COMBAT.md` |
 | Music stem | `resources/music/<id>.tres` (`MusicStemDef`) + WAV via `make stems` | `MusicStemRegistry` + `MusicSystem` | `docs/systems/MUSIC.md` |
 | Command | `scripts/core/commands/<name>_command.gd` (`extends WorldCommand`) + a `WorldContext` field if it needs a new service + `CommandCodec` case if replicable | `CommandBus` / `CommandRouter` | `docs/COMMANDS.md` |
 
 Rules of thumb: a new ability `kind` needs **both** a `.tres` (data) and an effect
-`Callable` registered in `world.gd` (behavior). A new replicable command needs a
-`CommandCodec.encode`/`decode` case or it stays client-local. Registries auto-scan
-their directory — no code edit to add a pure-data item/recipe/creature/stem. Copy
-an existing `.tres` for the exact typed-array / sub-resource syntax.
+`Callable` registered in `world.gd` (behavior). A metal ability also needs
+`resource_kind` on the `.tres` — leave it empty or `&"lumen"` for lumen abilities.
+A new replicable command needs a `CommandCodec.encode`/`decode` case or it stays
+client-local. Registries auto-scan their directory — no code edit to add a
+pure-data item/recipe/creature/stem. Copy an existing `.tres` for the exact
+typed-array / sub-resource syntax.
 
 ---
 
@@ -166,8 +171,10 @@ scripts/core/audio/  Music stem data contract (MusicStemDef)
 scripts/core/sim/    Tick substrate (SimulationClock)
 scripts/core/net/    Replication wire format (CommandCodec, CommandLog) — pure, no networking
 scripts/systems/     Gameplay systems (items, inventory, crafting, flora, biomes)
-scripts/systems/magic/   Lumen magic (LumenWell, MagicSystem, AbilityRegistry)
+scripts/systems/magic/   Lumen + metal magic (LumenWell, MagicSystem, AbilityRegistry, MetalReserves, ChannelSystem, FerroKinetics, FerricCoin)
 scripts/systems/combat/  Combat (Health, CombatService, CreatureRegistry, Umbral, SpawnSystem)
+scripts/systems/status/  Status effects (StatusEffectSystem — vigor, keensight, pewter drag)
+scripts/systems/world/   World-level integrator extractions (FerromancyRig)
 scripts/systems/audio/   Adaptive music (IntensityModel, MusicStemRegistry, MusicSystem)
 scripts/systems/sequencer/ In-world sequencer (StepTimeline, SectorMath, SequencerCore, NoteBlock, BlockPlacementService)
 scripts/systems/net/ Co-op runtime (NetworkSession, CommandRouter, PlayerSync, RemotePlayer)
@@ -200,7 +207,7 @@ scripts/             Shell scripts (setup.sh, etc.) + GDScript subdirs
 
 ## Known Gotchas
 
-Traps seen building phases 1-7. Check these before debugging from scratch:
+Traps seen building phases 1-8. Check these before debugging from scratch:
 
 - **`HOME` override.** Every raw binary invocation must prefix
   `HOME=/tmp/anthesis-home` so the editor never writes to the real home. `make`
@@ -249,6 +256,23 @@ Traps seen building phases 1-7. Check these before debugging from scratch:
   `connected_to_server` — never RPC the host the instant after `join()`.
 - **Parallel file collisions.** `project.godot` and `world.gd` are integrator-only
   (see `new-phase`). Builders never edit them, or parallel work collides on merge.
+- **`gdlintrc` raises `max-file-lines: 1200`.** Added in Phase 8 to accommodate
+  `world.gd` (1145 lines after `FerromancyRig` extraction). Only the line-count
+  heuristic is relaxed — all correctness rules keep their defaults. Do not raise
+  it further without extracting more behaviour first.
+- **`kinds()` StringName sort.** `metal_reserves.kinds()` uses `sort_custom` with
+  a `String(a) < String(b)` comparator — NOT `Array.sort()`, which orders by
+  internal hash. Any code that iterates `kinds()` and expects stable UI order
+  depends on lexical ordering. Don't revert this to a bare `sort()`.
+- **Metal wells start empty.** Like `LumenWell`, every metal well starts at 0
+  charge. Tests that need to cast a metal ability must either `add(kind, amount)`
+  directly or pre-stock the test inventory with flakes.
+- **`ensure` is lazy, not eager.** `MetalReserves.ensure` tops up only until the
+  well can afford the requested `amount`. It does not fill the well to capacity.
+  Passing `inventory = null` is safe and means "don't swallow, just check".
+- **`ChannelSystem` is a `Node`, not `RefCounted`.** If you instantiate it outside
+  the scene tree and connect `SimulationClock.ticked` to `on_tick`, it can be
+  GC'd. Always `add_child` it (the integrator names it `"Channels"`).
 
 ---
 

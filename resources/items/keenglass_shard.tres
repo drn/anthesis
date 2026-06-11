@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="ItemDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/core/items/item_def.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"keenglass_shard"
+display_name = "Keenglass Shard"
+max_stack = 64
+category = &"material"
+swatch_color = Color(0.82, 0.94, 0.78, 1)
+description = "A fragment of pale green translucent ore grown in the deep quiet. Held to the light it resolves distant shapes into perfect clarity — the tin it yields amplifies perception to the edge of the impossible."

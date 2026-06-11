@@ -41,3 +41,21 @@ var combat: CombatService
 ## ([PlaceBlockCommand], [RemoveBlockCommand], [CycleNoteCommand]) route through
 ## it. May be null in legacy / unit-test contexts.
 var block_place: BlockPlacementService
+
+## Active status-effect tracker for all combatants. Used by [DamageCommand] to
+## check vigor resistance and by future commands that need per-entity effect
+## state. May be null in legacy / unit-test contexts.
+var status: StatusEffectSystem
+
+## Burning-channel manager that drives vigor and keensight drain. Toggle and
+## flare commands route through it. May be null in legacy / unit-test contexts.
+var channels: ChannelSystem
+
+## Per-metal reserve wells. Spell-cast commands top up reserves from inventory
+## flakes before the cost gate runs. May be null in legacy / unit-test contexts.
+var metal_reserves: MetalReserves
+
+## Spawns a physical ferric coin at the given position with the given velocity.
+## Signature: Callable(origin: Vector3, velocity: Vector3). Assigned by World
+## during wiring. An invalid Callable is safe — [ThrowCoinCommand] guards it.
+var coin_spawn: Callable = Callable()

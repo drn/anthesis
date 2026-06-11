@@ -2,7 +2,7 @@
 
 A cosmic-whimsical open-source voxel adventure game — smooth diggable terrain, Sanderson-inspired magic, deep crafting, and EDM-driven adaptive music.
 
-> **Status: Pre-alpha, playable vertical slice.** You can wander a glowing cosmic world, dig and reshape the terrain, harvest bioluminescent flora, craft, cast lumen magic, fight Umbrals in the dark, and compose music with in-world sequencer blocks — all to an adaptive EDM soundtrack.
+> **Status: Pre-alpha, playable vertical slice.** You can wander a glowing cosmic world, dig and reshape the terrain, harvest bioluminescent flora, craft, cast lumen magic, burn metals with Ferromancy channels, fight Umbrals in the dark, and compose music with in-world sequencer blocks — all to an adaptive EDM soundtrack.
 
 **New here? Read the [Gameplay Guide](docs/GAMEPLAY.md)** — every item, recipe, ability, and creature, plus how the dig → harvest → craft → compose loop fits together.
 
@@ -36,7 +36,9 @@ Exploration-first. **Umbrals** — shadow wisps with glowing cores — condense 
 | ![Digging](docs/media/phase1-dig-trench.png) Carving the terrain | ![Inventory](docs/media/phase2-inventory-crafting.png) Inventory + crafting |
 | ![Magic](docs/media/phase3-lumen-bloom.png) Lumen Bloom cast | ![Combat](docs/media/phase4-combat-hit.png) Shardling combat |
 | ![Sequencer](docs/media/phase6-sequencer.png) The in-world music sequencer — a Core ringed by Note Blocks | ![Pause menu](docs/media/pause-menu.png) Pause menu — settings + key bindings |
-| ![HUD](docs/media/hud-orbs-mid.png) Diablo-style HUD — liquid resource orbs, spell bar, quick belt | |
+| ![HUD](docs/media/hud-orbs-mid.png) Diablo-style HUD — liquid resource orbs, spell bar, quick belt | ![Metal reserves](docs/media/phase8-1-reserves.png) Metal reserve bars — four burnables beside the lumen orb |
+| ![Vigor active](docs/media/phase8-2-vigor.png) Vigor burning — pewter-fuelled speed and strike boost | ![Ferropush](docs/media/phase8-3-ferro-push.png) Ferropush off a Lodestone deposit |
+| ![Coin throw](docs/media/phase8-4-coin.png) Ferric coin in flight — Ferropush anchor and projectile | |
 
 ---
 
@@ -51,7 +53,8 @@ Exploration-first. **Umbrals** — shadow wisps with glowing cores — condense 
 | 4 — Combat | Umbral enemies, deterministic AI, darkness spawning | ✅ |
 | 5 — Adaptive Music | Procedural EDM stems, intensity-driven mix | ✅ |
 | 6 — Music Sequencer | In-world composing with craftable blocks (signature) | ✅ |
-| 7 — Co-op | Authoritative command layer → multiplayer | **In progress** |
+| 7 — Co-op | Authoritative command layer → multiplayer | ✅ |
+| 8 — Ferromancy | Metal-powered push/pull, sustained channels, status effects | ✅ |
 
 ---
 
@@ -106,7 +109,13 @@ The editor binary lands at `tools/godot/macos_editor.app` (gitignored).
 | **Right click** | Place terrain |
 | **F** | Strike (attack Umbrals / remove placed blocks) |
 | **E** | Harvest flora · retune a Note Block |
-| **1 / 2 / 3** | Cast: Lumen Bloom · Worldshaper Burst · Skyward Step |
+| **1 / 2** | Cast: Ferropull · Ferropush |
+| **3 / 4 / 5** | Cast: Lumen Bloom · Worldshaper Burst · Skyward Step |
+| **G** | Toggle Vigor (burn pewter — speed + strike boost) |
+| **T** | Toggle Keensight (burn tin — brightened world) |
+| **Tab** | Metal sense — blue lines to nearby metal sources |
+| **Q** | Throw ferric coin |
+| **Shift** | Flare — triple channel drain while held |
 | **N** | Place a Sequencer Core (requires one in inventory) |
 | **B** | Place a Note Block (requires one in inventory) |
 | **I** | Inventory + crafting panel (toggle) |

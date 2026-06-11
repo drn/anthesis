@@ -1,15 +1,17 @@
 ## Tests AbilityRegistry scanning, sorting, and lookup behaviour.
 ##
-## Validates: scanning the real resources/abilities dir finds all 3 Phase 3
+## Validates: scanning the real resources/abilities dir finds all 5 Phase 3+8
 ## abilities sorted by id; a missing dir yields an empty registry; ability()
 ## lookup returns the correct def or null.
 extends GutTest
 
 # ---------------------------------------------------------------------------
-# Pinned Phase 3 ability ids in expected sorted (alphabetical) order.
+# Pinned Phase 3+8 ability ids in expected sorted (alphabetical) order.
 # ---------------------------------------------------------------------------
 
 const EXPECTED_ABILITY_IDS_SORTED: Array = [
+	&"ferro_pull",
+	&"ferro_push",
 	&"lumen_bloom",
 	&"shape_burst",
 	&"skyward",
@@ -30,8 +32,8 @@ func test_scans_all_expected_abilities() -> void:
 func test_abilities_sorted_by_id() -> void:
 	var reg := AbilityRegistry.new()
 	var ids := reg.ability_ids()
-	# Must contain at least the 3 pinned ids in sorted order.
-	assert_true(ids.size() >= 3, "Registry must have at least 3 abilities")
+	# Must contain at least the 5 pinned ids in sorted order.
+	assert_true(ids.size() >= 5, "Registry must have at least 5 abilities")
 	for i in range(ids.size() - 1):
 		assert_true(
 			str(ids[i]) <= str(ids[i + 1]),

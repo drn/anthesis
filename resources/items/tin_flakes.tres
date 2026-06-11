@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="ItemDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/core/items/item_def.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"tin_flakes"
+display_name = "Tin Flakes"
+max_stack = 99
+category = &"consumable"
+swatch_color = Color(0.84, 0.96, 0.8, 1)
+description = "Keenglass ground to a pale powder that catches the light like ground glass. Burn a mote and the world rewrites itself in startling detail — footsteps heard through bedrock, heartbeats through stone walls, blue lines tracing every hidden metal vein."

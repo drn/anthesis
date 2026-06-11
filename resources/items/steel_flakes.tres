@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="ItemDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/core/items/item_def.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"steel_flakes"
+display_name = "Steel Flakes"
+max_stack = 99
+category = &"consumable"
+swatch_color = Color(0.78, 0.82, 0.88, 1)
+description = "Ground skysteel alloyed with trace lumen and ready to burn. The moment the powder ignites, every heavy mass becomes a launch ramp — an anchor to push against, a sky to throw yourself into."

@@ -65,6 +65,30 @@ const RESPAWN_DELAY := 4.0
 
 const _UMBRAL_SCENE := preload("res://scenes/creatures/umbral.tscn")
 
+## Ferromancy (Phase 8). Metal deposit props scattered with the flora, plus the
+## throwable ferric coin spawned by the coin-toss command.
+const _DEPOSIT_LODESTONE_SCENE := preload("res://scenes/props/metal_deposit_lodestone.tscn")
+const _DEPOSIT_SKYSTEEL_SCENE := preload("res://scenes/props/metal_deposit_skysteel.tscn")
+const _DEPOSIT_VIGORITE_SCENE := preload("res://scenes/props/metal_deposit_vigorite.tscn")
+const _DEPOSIT_KEENGLASS_SCENE := preload("res://scenes/props/metal_deposit_keenglass.tscn")
+const _FERRIC_COIN_SCENE := preload("res://scenes/props/ferric_coin.tscn")
+
+## Maps each burnable metal kind to the inventory flake item that charges it.
+const FLAKE_MAP := {
+	&"iron": &"iron_flakes",
+	&"steel": &"steel_flakes",
+	&"pewter": &"pewter_flakes",
+	&"tin": &"tin_flakes",
+}
+
+## Strike-damage multiplier while the player burns Vigor (the boon side of the
+## pewter trade; the channel boons themselves live in [FerromancyRig]).
+const VIGOR_STRIKE_MULT := 1.5
+## A coin landing faster than this (m/s) deals strike damage to a struck Umbral.
+const COIN_STRIKE_SPEED := 6.0
+## Damage a fast-moving thrown coin deals on impact.
+const COIN_STRIKE_DAMAGE := 8.0
+
 ## Sequencer (Phase 6 contract #10).
 ## A Note Block joins the nearest Sequencer Core within this many metres.
 const SEQUENCER_CORE_RANGE := 10.0
@@ -101,6 +125,19 @@ var _well: LumenWell
 var _ability_registry: AbilityRegistry
 var _magic: MagicSystem
 var _blooms: Node3D
+
+## Ferromancy (Phase 8): per-metal reserves, the sustained-burn channel manager,
+## the status-effect tracker, the throwable-coin container, and the blue-line
+## metal-sense overlay.
+var _metal_reserves: MetalReserves
+var _channels: ChannelSystem
+var _status: StatusEffectSystem
+var _coins: Node3D
+var _metal_overlay: MetalLineOverlay
+## Realized ferromancy behaviour (channel boons + Ferropull/push), kept out of
+## this hub. Constructed in [method _build_magic], collaborators bound after the
+## combat service exists.
+var _ferro_rig: FerromancyRig
 
 var _combat: CombatService
 var _creatures: CreatureRegistry
@@ -313,12 +350,47 @@ func _build_magic() -> void:
 
 	_well = LumenWell.new(LUMEN_CAPACITY)
 	_ability_registry = AbilityRegistry.new()
-	_magic = MagicSystem.new(_well, func() -> int: return _clock.current_tick())
+
+	# Ferromancy (Phase 8): one well per metal, a per-tick status tracker, and the
+	# channel manager that drives sustained burns. The magic gate resolves each
+	# ability to its well by resource_kind — &"lumen" → the Lumen well, a metal
+	# kind → that metal's reserve — so a single MagicSystem gates every cast.
+	_metal_reserves = MetalReserves.new(FLAKE_MAP)
+
+	_status = StatusEffectSystem.new()
+	_status.name = "StatusEffects"
+	add_child(_status)
+
+	_channels = ChannelSystem.new()
+	_channels.name = "Channels"
+	add_child(_channels)
+	_channels.setup(_metal_reserves, _inventory)
+
+	var well_resolver := func(kind: StringName) -> LumenWell:
+		if kind == &"lumen":
+			return _well
+		return _metal_reserves.well(kind)
+	_magic = MagicSystem.new(well_resolver, func() -> int: return _clock.current_tick())
+
+	# Drive both per-tick subsystems off the deterministic clock. Stored on
+	# scene-tree Nodes so the tick Callables can never be GC'd.
+	_clock.ticked.connect(_status.on_tick)
+	_clock.ticked.connect(_channels.on_tick)
+
+	# The rig owns the realized channel boons; collaborators (combat) are bound
+	# later in _install_ability_effects once the combat service exists.
+	_ferro_rig = FerromancyRig.new()
+	_ferro_rig.install_channels(_channels)
 
 	# A container for spawned Lumen Bloom motes, kept out of the flora subtree.
 	_blooms = Node3D.new()
 	_blooms.name = "Blooms"
 	add_child(_blooms)
+
+	# A container for thrown ferric coins (live, local-only physics entities).
+	_coins = Node3D.new()
+	_coins.name = "Coins"
+	add_child(_coins)
 
 	# Seed the starting charge after wiring so the HUD picks it up on bind.
 	_well.add(STARTING_LUMEN)
@@ -357,6 +429,12 @@ func _build_command_layer() -> void:
 	_context.lumen_gain = func(amount: float) -> void: _well.add(amount)
 	# Combat wiring: hits route through the bus into the CombatService.
 	_context.combat = _combat
+	# Ferromancy wiring (Phase 8): status tracker, channel manager, metal reserves,
+	# and the coin-spawn seam the ThrowCoinCommand calls after consuming a coin.
+	_context.status = _status
+	_context.channels = _channels
+	_context.metal_reserves = _metal_reserves
+	_context.coin_spawn = _spawn_coin
 	_command_bus = CommandBus.new(_context)
 
 
@@ -371,6 +449,10 @@ func _build_player() -> void:
 	_player.place_block_requested.connect(_on_place_block_requested)
 	_player.block_interact_requested.connect(_on_block_interact_requested)
 	_player.block_remove_requested.connect(_on_block_remove_requested)
+	# Ferromancy intents (Phase 8): channel toggles, flare, coin toss.
+	_player.channel_toggle_requested.connect(_on_channel_toggle_requested)
+	_player.flare_changed.connect(_on_flare_changed)
+	_player.throw_coin_requested.connect(_on_throw_coin_requested)
 
 
 ## Wire the player into the combat layer and drive Umbral spawning off the clock.
@@ -389,7 +471,15 @@ func _wire_combat() -> void:
 func _build_flora() -> void:
 	_flora = FloraScatter.new()
 	_flora.name = "FloraScatter"
-	_flora.prop_scenes = [_MUSHROOM_SCENE, _FLOWER_SCENE, _CRYSTAL_SCENE]
+	_flora.prop_scenes = [
+		_MUSHROOM_SCENE,
+		_FLOWER_SCENE,
+		_CRYSTAL_SCENE,
+		_DEPOSIT_LODESTONE_SCENE,
+		_DEPOSIT_SKYSTEEL_SCENE,
+		_DEPOSIT_VIGORITE_SCENE,
+		_DEPOSIT_KEENGLASS_SCENE,
+	]
 	_flora.count = FLORA_COUNT
 	_flora.area_extent = FLORA_AREA_EXTENT
 	add_child(_flora)
@@ -404,8 +494,22 @@ func _build_hud() -> void:
 	_hud.bind_magic(_well, _magic, _ability_registry.abilities())
 	# Combat: health bar + hurt vignette read the player's Health pool.
 	_hud.bind_health(_player_health)
+	# Ferromancy: metal-reserve gauges read the reserves + channel state.
+	_hud.bind_metals(_metal_reserves, _channels)
 	# Loot awards drive a transient pickup toast (presentation reads only).
 	_loot.loot_awarded.connect(_on_loot_awarded)
+
+	# Blue-line metal-sense overlay: a 3D child fed read-only providers for the
+	# player's camera and the live metal-source group (Phase 8).
+	_metal_overlay = MetalLineOverlay.new()
+	_metal_overlay.name = "MetalLineOverlay"
+	add_child(_metal_overlay)
+	_metal_overlay.setup(
+		func() -> Camera3D:
+			return _player.get_node_or_null("Camera3D") if _player != null else null,
+		func() -> Array: return get_tree().get_nodes_in_group(&"metal_sources"),
+		_metal_reserves,
+	)
 
 
 func _on_loot_awarded(amounts: Array[ItemAmount]) -> void:
@@ -817,15 +921,59 @@ func _on_block_remove_requested(target: Node) -> void:
 
 
 ## Route a player melee strike into a [DamageCommand] with forward+up knockback.
+## Burning Vigor (pewter) amplifies the strike's damage by [constant VIGOR_STRIKE_MULT].
 func _on_strike_requested(target_id: int, _hit_point: Vector3) -> void:
 	var forward := -_player.global_transform.basis.z
 	forward.y = 0.0
 	if forward.length() > 0.0:
 		forward = forward.normalized()
 	var knockback := forward * STRIKE_KNOCKBACK_FORWARD + Vector3.UP * STRIKE_KNOCKBACK_UP
+	var damage := PLAYER_STRIKE_DAMAGE
+	if _status != null and _status.has(_player.get_instance_id(), &"vigor"):
+		damage *= VIGOR_STRIKE_MULT
 	# Combat is client-local (non-replicable) in v0: damage stays on the peer
 	# that dealt it. Umbrals are host-only, so on a client this no-ops harmlessly.
-	_router.submit(DamageCommand.new(target_id, PLAYER_STRIKE_DAMAGE, knockback))
+	_router.submit(DamageCommand.new(target_id, damage, knockback))
+
+
+# ---------------------------------------------------------------------------
+# Ferromancy: coin toss, channel toggles, flare (Phase 8)
+# ---------------------------------------------------------------------------
+
+
+## Spawn a thrown [FerricCoin] at [param origin] moving at [param velocity].
+## Wired into [member WorldContext.coin_spawn]; the [ThrowCoinCommand] calls this
+## only after it has consumed a coin from the inventory.
+func _spawn_coin(origin: Vector3, velocity: Vector3) -> void:
+	if _coins == null:
+		return
+	var coin: FerricCoin = _FERRIC_COIN_SCENE.instantiate()
+	_coins.add_child(coin)
+	coin.global_position = origin
+	coin.linear_velocity = velocity
+	coin.struck.connect(_on_coin_struck)
+
+
+## A thrown coin hit an Umbral: deal strike damage when it landed fast enough.
+func _on_coin_struck(target_id: int, speed: float) -> void:
+	if speed <= COIN_STRIKE_SPEED:
+		return
+	_router.submit(DamageCommand.new(target_id, COIN_STRIKE_DAMAGE, Vector3.ZERO))
+
+
+## Route a channel toggle intent (G / T) through the command layer.
+func _on_channel_toggle_requested(channel_id: StringName) -> void:
+	_router.submit(ToggleChannelCommand.new(channel_id))
+
+
+## Route a flare press/release (Shift) through the command layer.
+func _on_flare_changed(active: bool) -> void:
+	_router.submit(SetFlareCommand.new(active))
+
+
+## Route a coin-throw intent (Q) through the command layer.
+func _on_throw_coin_requested(origin: Vector3, velocity: Vector3) -> void:
+	_router.submit(ThrowCoinCommand.new(origin, velocity))
 
 
 ## Drive deterministic Umbral spawning and far-despawn each simulation tick.
@@ -951,10 +1099,15 @@ func _respawn_player() -> void:
 ## and arms the cooldown. Effects are installed after the player exists so
 ## Skyward can read the player's velocity.
 func _install_ability_effects() -> void:
+	# Bind the rig now that the player and combat service exist; its ferro effects
+	# read both at cast time.
+	_ferro_rig.setup(self, _status, _combat)
 	_context.ability_effects = {
 		&"shape_burst": _effect_shape_burst,
 		&"lumen_bloom": _effect_lumen_bloom,
 		&"skyward": _effect_skyward,
+		&"ferro_pull": _ferro_rig.ferro_pull,
+		&"ferro_push": _ferro_rig.ferro_push,
 	}
 
 

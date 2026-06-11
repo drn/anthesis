@@ -23,12 +23,17 @@ ever touches world state directly.
 | `scripts/core/commands/place_block_command.gd` | Sequencer block placement |
 | `scripts/core/commands/remove_block_command.gd` | Sequencer block removal + refund |
 | `scripts/core/commands/cycle_note_command.gd` | Note Block pitch cycle |
+| `scripts/core/commands/toggle_channel_command.gd` | Toggle a named metal channel (vigor / keensight) |
+| `scripts/core/commands/set_flare_command.gd` | Enable / disable flare on all active channels |
+| `scripts/core/commands/throw_coin_command.gd` | Consume one ferric coin from inventory and spawn it |
 | `scripts/core/net/command_codec.gd` | Wire serialization for replication |
 | `scripts/core/net/command_log.gd` | Ordered, bounded replication log |
 | `scripts/systems/net/command_router.gd` | Authority-aware submit seam |
 | `tests/unit/test_commands.gd` | Core command tests + stub patterns |
 | `tests/unit/test_cast_command.gd` | CastCommand + HarvestCommand lumen tests |
 | `tests/unit/test_block_commands.gd` | PlaceBlock / RemoveBlock / CycleNote |
+| `tests/unit/test_toggle_channel_command.gd` | ToggleChannelCommand + SetFlareCommand routing |
+| `tests/unit/test_throw_coin_command.gd` | ThrowCoinCommand — coin consume + spawn args |
 | `tests/unit/test_command_codec.gd` | Encode/decode/range-gate tests |
 | `tests/unit/test_command_router.gd` | Router authority/routing tests |
 | `tests/unit/test_command_log.gd` | Log append/eviction/clear tests |
@@ -68,6 +73,10 @@ commands degrade gracefully when only part of the context is wired.
 | `lumen_gain` | `Callable(amount: float)` | HarvestCommand |
 | `combat` | `CombatService` | DamageCommand |
 | `block_place` | `BlockPlacementService` | PlaceBlockCommand, RemoveBlockCommand, CycleNoteCommand |
+| `status` | `StatusEffectSystem` | DamageCommand (vigor resist), ToggleChannelCommand |
+| `channels` | `ChannelSystem` | ToggleChannelCommand, SetFlareCommand |
+| `metal_reserves` | `MetalReserves` | CastCommand (auto-swallow pre-gate) |
+| `coin_spawn` | `Callable(origin: Vector3, velocity: Vector3)` | ThrowCoinCommand |
 
 ### CommandBus
 
@@ -186,6 +195,40 @@ Checks `target.is_in_group(&"note_blocks")` and `target.has_method("cycle_pitch"
 then calls `target.cycle_pitch()`. No-op for non-note-block nodes. Does not use
 `ctx` at all. Replicable (wire tag `"cycle"`; target encoded as block node name).
 
+### ToggleChannelCommand
+
+```gdscript
+func _init(channel_id: StringName)
+func apply(ctx: WorldContext)
+```
+
+Calls `ctx.channels.toggle(channel_id)`. Silent no-op when `ctx.channels` is null.
+Not replicable (client-local). Used for G → vigor and T → keensight.
+
+### SetFlareCommand
+
+```gdscript
+func _init(active: bool)
+func apply(ctx: WorldContext)
+```
+
+Calls `ctx.channels.set_flare(active)`. Silent no-op when `ctx.channels` is null.
+Not replicable (client-local). Submitted on Shift press (`active = true`) and
+release (`active = false`).
+
+### ThrowCoinCommand
+
+```gdscript
+func _init(origin: Vector3, velocity: Vector3)
+func apply(ctx: WorldContext)
+```
+
+Requires `ctx.inventory` and a valid `ctx.coin_spawn` Callable. Calls
+`ctx.inventory.remove(&"ferric_coin", 1)` — aborts silently if the return value
+is 0 (no coin in inventory). On success, calls `ctx.coin_spawn.call(origin, velocity)`,
+which instantiates `ferric_coin.tscn`, positions it, sets its `linear_velocity`, and
+connects its `struck` signal to the damage handler. Not replicable (client-local).
+
 ---
 
 ## The Router Seam (Offline / Online)
@@ -204,7 +247,8 @@ online client + local   -> bus.execute  (inventory/magic/craft/combat stay clien
 **Replicable** commands (shared-world mutations): `DigCommand`, `PlaceCommand`,
 `PlaceBlockCommand`, `RemoveBlockCommand`, `CycleNoteCommand`, `HarvestCommand`.
 
-**Client-local** (not replicable): `CastCommand`, `DamageCommand`, `CraftCommand`.
+**Client-local** (not replicable): `CastCommand`, `DamageCommand`, `CraftCommand`,
+`ToggleChannelCommand`, `SetFlareCommand`, `ThrowCoinCommand`.
 
 `CommandRouter` delegates to `CommandCodec` for encode/decode. All `@rpc` bodies
 are one-liners that delegate to plain non-RPC methods (`_commit`, `_handle_request`,
