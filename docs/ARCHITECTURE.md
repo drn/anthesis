@@ -136,7 +136,7 @@ cost and a tick-based cooldown, and the only source of lumen is harvesting livin
   command. `HarvestCommand` credits a harvested prop's `lumen` back into the well via
   `WorldContext.lumen_gain`, closing the gather→cast loop.
 
-The HUD's lumen bar and ability slots read the well and rule gate; cooldown veils and
+The HUD's lumen orb and ability slots read the well and rule gate; cooldown veils and
 cast-failure flashes are presentation-only, driven by signals and per-frame polling.
 
 ### Phase 4 — Combat & Adventure (live)
@@ -176,7 +176,7 @@ substrate.
   `Health.died` shows the death overlay, freezes input, and respawns them at the spawn
   point at full health after a delay.
 
-The HUD's health bar reads the player's `Health`; a hurt vignette flashes on damage and a
+The HUD's health orb reads the player's `Health`; a hurt vignette flashes on damage and a
 death overlay fades in on death — all presentation-only, driven by the `changed`/`died`
 signals.
 
