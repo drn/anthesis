@@ -15,6 +15,7 @@ See CLAUDE.md for the full AI build conventions, tech stack, and architecture.
 
 ## Docs Map
 
+- `docs/GAMEPLAY.md` — player-facing guide (items, recipes, abilities, creatures, sequencer how-to).
 - `docs/ARCHITECTURE.md` — layer model + per-phase subsections (read before structural changes).
 - `docs/COMMANDS.md` — the command/intent layer all world mutations route through.
 - `docs/systems/*.md` — per-system deep dives (extend-this-system guides).

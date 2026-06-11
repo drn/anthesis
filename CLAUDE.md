@@ -52,6 +52,7 @@ Every doc, what it covers, and when to read it:
 | Doc | Covers |
 |-----|--------|
 | `README.md` | Project status, screenshot gallery, controls, quick start |
+| `docs/GAMEPLAY.md` | Player-facing guide — items, recipes, abilities, creatures, sequencer how-to. Update when gameplay-visible values change |
 | `CLAUDE.md` (this file) | AI build conventions, hard rules, layout, cookbook, gotchas |
 | `AGENTS.md` | One-page mirror of the essentials for any agent |
 | `CONTRIBUTING.md` | Human contributor workflow |
@@ -225,6 +226,9 @@ Traps seen building phases 1-7. Check these before debugging from scratch:
 - **`ZN_FastNoiseLite` type trap.** `VoxelGeneratorNoise.noise` is typed to Godot's
   built-in `FastNoiseLite`, not `godot_voxel`'s `ZN_FastNoiseLite`. Use built-in
   `FastNoiseLite` (`frequency` directly) — see `voxel_world.gd`.
+- **Tick rate is 10/s.** `SimulationClock.ticks_per_second = 10.0` — convert
+  `cooldown_ticks` and other tick counts at 10 ticks per second (20 ticks =
+  2.0 s), not 20 or 60. Easy to get wrong when writing player-facing docs.
 - **int64 literals.** Keep seed/hash math inside `WorldSeed.derive(...)` streams;
   hand-rolled bit math overflows 32-bit and wraps silently.
 - **Callable GC.** A `Callable` seam (clock-tick fn, `voxel_tool` provider) is

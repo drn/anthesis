@@ -4,6 +4,8 @@ A cosmic-whimsical open-source voxel adventure game — smooth diggable terrain,
 
 > **Status: Pre-alpha, playable vertical slice.** You can wander a glowing cosmic world, dig and reshape the terrain, harvest bioluminescent flora, craft, cast lumen magic, fight Umbrals in the dark, and compose music with in-world sequencer blocks — all to an adaptive EDM soundtrack.
 
+**New here? Read the [Gameplay Guide](docs/GAMEPLAY.md)** — every item, recipe, ability, and creature, plus how the dig → harvest → craft → compose loop fits together.
+
 ![The cosmic world](docs/media/phase1-cosmic-world.png)
 
 ---
@@ -115,6 +117,9 @@ flora's glow is also what keeps Umbrals from spawning near you. Craft a
 Sequencer Core plus Note Blocks (press I) and arrange the blocks in a ring around
 the core: each block's angle picks its step in a 16-step loop synced to the
 soundtrack, and E retunes its pitch.
+
+For the full picture — loot tables, recipes, ability costs, creature stats, and
+how to build your first sequencer — see the **[Gameplay Guide](docs/GAMEPLAY.md)**.
 
 ---
 
