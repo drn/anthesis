@@ -63,6 +63,12 @@ const RESPAWN_DELAY := 4.0
 
 const _UMBRAL_SCENE := preload("res://scenes/creatures/umbral.tscn")
 
+## Sequencer (Phase 6 contract #10).
+## A Note Block joins the nearest Sequencer Core within this many metres.
+const SEQUENCER_CORE_RANGE := 10.0
+## Name of the music stem player whose transport the Sequencer Cores lock to.
+const TRANSPORT_STEM_PLAYER := "Stem_pad"
+
 ## Adaptive music tuning (Phase 5 contract #6).
 ## An Umbral within this many metres of the player feeds the &"enemy_near"
 ## intensity event each tick, lifting the soundtrack as danger closes in.
@@ -107,6 +113,9 @@ var _intensity: IntensityModel
 var _stem_registry: MusicStemRegistry
 var _music: MusicSystem
 
+var _blocks: Node3D
+var _block_place: BlockPlacementService
+
 var _poll_elapsed := 0.0
 var _player_placed := false
 var _flora_scattered := false
@@ -126,6 +135,7 @@ func _ready() -> void:
 	_wire_combat()
 	_build_hud()
 	_build_music()
+	_build_sequencer()
 	# Park the player up high until terrain streams in, then drop them onto it.
 	_player.global_position = Vector3(0.0, PLAYER_SAFE_ALTITUDE, 0.0)
 
@@ -225,6 +235,16 @@ func intensity() -> IntensityModel:
 	return _intensity
 
 
+## The container holding placed sequencer blocks (Phase 6).
+func blocks_container() -> Node3D:
+	return _blocks
+
+
+## The sequencer block placement/removal service (Phase 6).
+func block_place() -> BlockPlacementService:
+	return _block_place
+
+
 # ---------------------------------------------------------------------------
 # Construction
 # ---------------------------------------------------------------------------
@@ -319,6 +339,9 @@ func _build_player() -> void:
 	_player.harvest_requested.connect(_on_harvest_requested)
 	_player.cast_requested.connect(_on_cast_requested)
 	_player.strike_requested.connect(_on_strike_requested)
+	_player.place_block_requested.connect(_on_place_block_requested)
+	_player.block_interact_requested.connect(_on_block_interact_requested)
+	_player.block_remove_requested.connect(_on_block_remove_requested)
 
 
 ## Wire the player into the combat layer and drive Umbral spawning off the clock.
@@ -425,6 +448,87 @@ func _on_music_tick(_tick_index: int) -> void:
 
 
 # ---------------------------------------------------------------------------
+# In-world music sequencer (Phase 6 — the signature feature)
+# ---------------------------------------------------------------------------
+
+
+## Stand up the in-world sequencer: a Blocks container plus the
+## [BlockPlacementService] that spawns/removes Sequencer Cores and Note Blocks.
+##
+## The service is inventory-gated (it charges/refunds the same [Inventory] the
+## rest of the game uses) and is handed two seams: a container provider (the
+## Blocks node) and a core_lookup that returns the nearest [SequencerCore] within
+## [constant SEQUENCER_CORE_RANGE] of a position. Cores lock their [StepTimeline]
+## to the live music transport via [method _transport_position] so player
+## compositions ride the same 110 BPM grid as the soundtrack. The service is
+## published on the [WorldContext] so the block commands can reach it.
+func _build_sequencer() -> void:
+	_blocks = Node3D.new()
+	_blocks.name = "Blocks"
+	add_child(_blocks)
+
+	_block_place = BlockPlacementService.new(
+		_inventory,
+		func() -> Node3D: return _blocks,
+		_nearest_core,
+	)
+	_block_place.block_placed.connect(_on_block_placed)
+	_context.block_place = _block_place
+
+
+## Find the nearest placed [SequencerCore] within range of [param pos], or null.
+func _nearest_core(pos: Vector3) -> SequencerCore:
+	if _blocks == null:
+		return null
+	var best: SequencerCore = null
+	var best_dist := SEQUENCER_CORE_RANGE
+	for child in _blocks.get_children():
+		if not (child is SequencerCore):
+			continue
+		var core := child as SequencerCore
+		var dist := core.global_position.distance_to(pos)
+		if dist <= best_dist:
+			best_dist = dist
+			best = core
+	return best
+
+
+## Read the live music transport position (seconds) from the pad stem player so
+## cores lock to the soundtrack. Returns 0.0 until the player exists / is found.
+func _transport_position() -> float:
+	if _music == null:
+		return 0.0
+	for player in _music.players():
+		if player.name == TRANSPORT_STEM_PLAYER:
+			return player.get_playback_position()
+	# Fall back to the first stem if the pad is renamed.
+	var all := _music.players()
+	if not all.is_empty():
+		return all[0].get_playback_position()
+	return 0.0
+
+
+## A block was placed: a freshly spawned Sequencer Core must be locked to the
+## music transport, and the player gets a one-line hint about block controls.
+func _on_block_placed(item_id: StringName, _position: Vector3) -> void:
+	if item_id == &"sequencer_core":
+		_lock_new_cores_to_transport()
+	if _hud != null and _hud.has_method("show_hint"):
+		_hud.show_hint("N: place Core   B: place Note Block   E: retune   F: remove")
+
+
+## Bind the transport Callable into any Sequencer Core that has not yet been set
+## up. Called after a core is placed (the placement service spawns it before this
+## handler runs, so its setup is deferred to here).
+func _lock_new_cores_to_transport() -> void:
+	if _blocks == null:
+		return
+	for child in _blocks.get_children():
+		if child is SequencerCore:
+			(child as SequencerCore).setup(_transport_position)
+
+
+# ---------------------------------------------------------------------------
 # Deferred placement (terrain streams in asynchronously)
 # ---------------------------------------------------------------------------
 
@@ -474,6 +578,21 @@ func _on_cast_requested(slot: int, target_pos: Vector3) -> void:
 
 func _on_craft_requested(recipe: Recipe) -> void:
 	_command_bus.execute(CraftCommand.new(recipe))
+
+
+## Route a block placement intent (N / B) through the command layer.
+func _on_place_block_requested(item_id: StringName, position: Vector3) -> void:
+	_command_bus.execute(PlaceBlockCommand.new(item_id, position))
+
+
+## Route a Note Block interaction (E) into a pitch-cycle through the bus.
+func _on_block_interact_requested(target: Node) -> void:
+	_command_bus.execute(CycleNoteCommand.new(target))
+
+
+## Route a block removal intent (F on a block) through the command layer.
+func _on_block_remove_requested(target: Node) -> void:
+	_command_bus.execute(RemoveBlockCommand.new(target))
 
 
 # ---------------------------------------------------------------------------

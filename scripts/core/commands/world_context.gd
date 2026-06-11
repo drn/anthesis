@@ -36,3 +36,8 @@ var lumen_gain: Callable = Callable()
 ## Combatant registry and damage router. Hits route through it via
 ## [DamageCommand]. May be null in legacy / unit-test contexts.
 var combat: CombatService
+
+## Sequencer block placement/removal service. Block commands
+## ([PlaceBlockCommand], [RemoveBlockCommand], [CycleNoteCommand]) route through
+## it. May be null in legacy / unit-test contexts.
+var block_place: BlockPlacementService

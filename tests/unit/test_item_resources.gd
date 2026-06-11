@@ -13,7 +13,9 @@ extends GutTest
 const ITEMS_DIR := "res://resources/items"
 const RECIPES_DIR := "res://resources/recipes"
 
-## Expected item ids — all six Phase 2 items must be present.
+## Expected item ids — the six Phase 2 items plus the Phase 6 sequencer blocks.
+## (Phase 6 ids are included so recipe ingredient/output validation, which checks
+## against this allowlist, recognizes the sequencer items.)
 const EXPECTED_ITEM_IDS: Array = [
 	&"soil",
 	&"crystal_shard",
@@ -21,12 +23,16 @@ const EXPECTED_ITEM_IDS: Array = [
 	&"lumen_petal",
 	&"bloom_brick",
 	&"lumen_torch",
+	&"sequencer_core",
+	&"note_block",
 ]
 
 ## Expected recipe ids.
 const EXPECTED_RECIPE_IDS: Array = [
 	&"bloom_brick",
 	&"lumen_torch",
+	&"sequencer_core",
+	&"note_block",
 ]
 
 

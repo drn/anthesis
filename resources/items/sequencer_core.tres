@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="ItemDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/core/items/item_def.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"sequencer_core"
+display_name = "Sequencer Core"
+max_stack = 4
+category = &"placeable"
+swatch_color = Color(1.0, 0.92, 0.7, 1)
+description = "A slowly turning prism of warm gold-white light, locked to the world's hidden 110-beat pulse. Ring Note Blocks around it and their spatial arrangement becomes a living melody — the cosmos keeping time with your hands."

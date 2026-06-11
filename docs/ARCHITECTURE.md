@@ -221,6 +221,41 @@ cosmic-progressive, 110 BPM, A minor.
   `combat_hit`; each `SimulationClock` tick emits `enemy_near` if any Umbral is within 12 m
   of the player. The soundtrack thus reads gameplay without owning or mutating any of it.
 
+### Phase 6 — In-World Music Sequencer (live, the signature feature)
+
+A **redstone-meets-EDM** sequencer the player builds *in the world*. Craft a **Sequencer
+Core** (a slowly rotating glowing prism) and **Note Blocks** (small crystals); the spatial
+arrangement of blocks around a Core *is* the pattern. Player compositions ride the same
+110 BPM / 16-step grid as the adaptive soundtrack, because the Core locks to the live music
+transport — there is one clock for the whole game.
+
+- **The transport is the soundtrack.** A `SequencerCore` owns a pure `StepTimeline`
+  (`scripts/systems/sequencer/`, `_init(bpm := 110.0, steps := 16, subdivision := 4)` — 16
+  steps over one 4-beat bar = 16th notes). Each frame the Core samples the playback position
+  of the `Stem_pad` music player (`World._transport_position`, a `Callable`), asks the
+  timeline which step boundaries the playhead crossed (`steps_crossed`, wrap- and
+  multi-step-aware), and fires the blocks on those steps. The composition and the soundtrack
+  share a single phase origin; nothing re-derives a beat.
+- **Angle is the step.** `SectorMath.step_for_offset` maps a block's XZ angle around its Core
+  (`atan2(x, -z)`, north = step 0, clockwise) to one of 16 sectors. Placing a Note Block in a
+  direction *picks its step*. The Core keeps a `step → [blocks]` registry so firing a step is
+  an O(1) lookup; a ring of 16 marker spheres visualizes the playhead.
+- **Pentatonic Note Blocks.** Each `NoteBlock` carries a `pitch_index` (0..7) across an
+  A-minor pentatonic bank of eight procedurally synthesized pluck one-shots
+  (`scripts/tools/generate_notes.py`, `make notes`; deterministic, CC0,
+  `assets/audio/notes/`). Interacting cycles the pitch and shifts the crystal's emissive
+  colour along a cyan→magenta gradient, so the arrangement reads as a visible melody.
+- **Everything mutates via commands.** `PlaceBlockCommand` / `RemoveBlockCommand` /
+  `CycleNoteCommand` (`scripts/core/commands/`) route through a `BlockPlacementService`
+  published on the `WorldContext`. The service is **inventory-gated** (charges on place,
+  refunds on remove — the same `Inventory` as crafting), snaps to a 0.5 grid, and binds a
+  Note Block to the nearest Core within 10 m (or leaves it dormant until a Core is placed
+  nearby, which then adopts it). The player only emits signals (`N` place Core, `B` place
+  Note Block, `E` retune, `F` remove); input never touches the world.
+- **Integration loop** (`World`): a `Blocks` container node, the `BlockPlacementService`
+  (container provider + nearest-core lookup), and `SequencerCore.setup(transport_callable)`
+  binding each freshly placed Core to the pad player's `get_playback_position()`.
+
 ---
 
 ## Systems as Autonomous Modules

@@ -164,6 +164,20 @@ func show_loot(awarded: Array, registry: Object) -> void:
 	_toast_tween.tween_property(_toast, "modulate:a", 0.0, TOAST_FADE_SECONDS)
 
 
+## Show a transient one-line hint in the toast slot (used by the sequencer to
+## surface block controls on the first placement). Same fade as a loot toast.
+func show_hint(text: String) -> void:
+	if text.is_empty():
+		return
+	_toast.text = text
+	if _toast_tween != null and _toast_tween.is_valid():
+		_toast_tween.kill()
+	_toast.modulate = Color(1.0, 1.0, 1.0, 1.0)
+	_toast_tween = create_tween()
+	_toast_tween.tween_interval(TOAST_HOLD_SECONDS)
+	_toast_tween.tween_property(_toast, "modulate:a", 0.0, TOAST_FADE_SECONDS)
+
+
 func _format_awarded(awarded: Array, registry: Object) -> String:
 	var parts: PackedStringArray = []
 	for amount in awarded:
