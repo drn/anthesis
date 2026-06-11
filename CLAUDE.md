@@ -226,6 +226,9 @@ Traps seen building phases 1-7. Check these before debugging from scratch:
 - **`ZN_FastNoiseLite` type trap.** `VoxelGeneratorNoise.noise` is typed to Godot's
   built-in `FastNoiseLite`, not `godot_voxel`'s `ZN_FastNoiseLite`. Use built-in
   `FastNoiseLite` (`frequency` directly) — see `voxel_world.gd`.
+- **Tick rate is 10/s.** `SimulationClock.ticks_per_second = 10.0` — convert
+  `cooldown_ticks` and other tick counts at 10 ticks per second (20 ticks =
+  2.0 s), not 20 or 60. Easy to get wrong when writing player-facing docs.
 - **int64 literals.** Keep seed/hash math inside `WorldSeed.derive(...)` streams;
   hand-rolled bit math overflows 32-bit and wraps silently.
 - **Callable GC.** A `Callable` seam (clock-tick fn, `voxel_tool` provider) is
