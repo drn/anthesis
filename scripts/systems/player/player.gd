@@ -26,6 +26,11 @@ signal harvest_requested(target: Node, drops: Array[ItemAmount])
 ## is hit (abilities like Skyward do not require a surface target).
 signal cast_requested(slot: int, target_pos: Vector3)
 
+## Emitted when the player presses the strike key (F) and the raycast hits
+## an umbral (CharacterBody3D in group "umbrals") within STRIKE_REACH metres.
+## target_id is the collider's instance ID; hit_point is the collision point.
+signal strike_requested(target_id: int, hit_point: Vector3)
+
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
@@ -35,6 +40,8 @@ const JUMP_VELOCITY := 5.0
 const MOUSE_SENSITIVITY := 0.002
 const DIG_RADIUS := 1.6
 const PLACE_RADIUS := 1.4
+## Maximum distance in metres at which a melee strike connects.
+const STRIKE_REACH := 2.8
 
 # ---------------------------------------------------------------------------
 # Node references (assigned in _ready)
@@ -88,6 +95,10 @@ func _unhandled_input(event: InputEvent) -> void:
 		var action_interact := "interact"
 		if InputMap.has_action(action_interact) and event.is_action_pressed(action_interact):
 			_try_harvest()
+
+		var action_strike := "strike"
+		if InputMap.has_action(action_strike) and event.is_action_pressed(action_strike):
+			_try_strike()
 
 		for slot in [1, 2, 3]:
 			var action_cast := "cast_%d" % slot
@@ -191,6 +202,19 @@ func _try_harvest() -> void:
 			harvest_requested.emit(candidate, harvestable.drops)
 			return
 		candidate = candidate.get_parent()
+
+
+func _try_strike() -> void:
+	if _raycast == null or not _raycast.is_colliding():
+		return
+	var collider := _raycast.get_collider()
+	if not (collider is CharacterBody3D and collider.is_in_group("umbrals")):
+		return
+	var hit := _raycast.get_collision_point()
+	var dist := global_transform.origin.distance_to(hit)
+	if dist > STRIKE_REACH:
+		return
+	strike_requested.emit(collider.get_instance_id(), hit)
 
 
 ## Returns the raycast hit point when colliding, otherwise a point 6 m along

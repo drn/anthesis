@@ -139,6 +139,47 @@ cost and a tick-based cooldown, and the only source of lumen is harvesting livin
 The HUD's lumen bar and ability slots read the well and rule gate; cooldown veils and
 cast-failure flashes are presentation-only, driven by signals and per-frame polling.
 
+### Phase 4 — Combat & Adventure (live)
+
+Shadowy **Umbrals** condense out of the dark and hunt the player; striking them back
+closes a fight→loot→lumen loop that reuses the existing command, tick, loot, and HUD
+substrate.
+
+- **Health** (`Health`, `scripts/systems/combat/`): a `RefCounted` damage pool —
+  `take_damage` clamps and emits `died` once on crossing zero; `heal` clamps to max and
+  no-ops when dead. The player's `Health` is owned by `World` (the controller stays
+  movement+intent only); each Umbral owns its own.
+- **Routing** (`CombatService` + `DamageCommand`): the service is an
+  `id → (Health, Node3D)` registry keyed by `get_instance_id()`; every hit routes
+  through `DamageCommand` into `WorldContext.combat`, applying damage and adding
+  knockback to a `CharacterBody3D`'s velocity. Commands never touch a `Health` or node
+  directly, matching the world-mutation rule.
+- **Data** (`CreatureDef`, `scripts/core/combat/`; `.tres` in `resources/creatures/`):
+  two species — **Voidmoth** (fragile, weak contact attack, drops glow_spore) and
+  **Shardling** (tough crystalline stalker, drops crystal_shard). Loaded by
+  `CreatureRegistry`, mirroring `AbilityRegistry`.
+- **Creatures** (`Umbral` + `UmbralAI`): the AI is pure, fully unit-testable logic —
+  a `idle/wander/chase/attack/dead` state machine that consumes positions and a tick
+  index and returns a movement+attack decision. The `Umbral` node caches that decision
+  from the `SimulationClock` tick and applies gravity/movement in `_physics_process`;
+  on death it plays a dissolve (core flash + shrink) and emits `perished`.
+- **Spawning** (`SpawnSystem`): pure deterministic planner seeded off the `"spawning"`
+  `WorldSeed` stream. Every 40 ticks it may place one Umbral on a 20–42 m ring around
+  the player, capped at 6 alive, **rejecting** any candidate within 9 m of a glow point
+  (flora props + active blooms) — Umbrals only condense in darkness. `World` instantiates
+  the planned creatures, gives each a per-creature RNG stream, registers them with the
+  `CombatService`, and despawns any beyond 60 m each round.
+- **Integration loop** (`World`): the player's `strike_requested` becomes a
+  `DamageCommand` (12 dmg + forward/up knockback); an Umbral's `attack_landed` becomes a
+  `DamageCommand` against the player (knockback away from the wisp); `perished` awards the
+  def's drops through `LootService` and its lumen reward into the well. The player's
+  `Health.died` shows the death overlay, freezes input, and respawns them at the spawn
+  point at full health after a delay.
+
+The HUD's health bar reads the player's `Health`; a hurt vignette flashes on damage and a
+death overlay fades in on death — all presentation-only, driven by the `changed`/`died`
+signals.
+
 ---
 
 ## Systems as Autonomous Modules

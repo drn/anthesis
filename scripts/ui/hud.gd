@@ -15,6 +15,13 @@ const TOAST_FADE_SECONDS := 0.6
 const LUMEN_EMPTY_COLOR := Color(0.35, 0.85, 1.0, 1.0)
 const LUMEN_FULL_COLOR := Color(0.9, 0.35, 0.95, 1.0)
 
+## Health bar fill gradient endpoints (full -> low).
+const HEALTH_FULL_COLOR := Color(0.95, 0.90, 0.85, 1.0)
+const HEALTH_LOW_COLOR := Color(0.9, 0.15, 0.10, 1.0)
+## Hurt vignette flash settings.
+const HURT_VIGNETTE_ALPHA := 0.25
+const HURT_VIGNETTE_FADE := 0.45
+
 ## Cosmic-glassy ability slot chrome.
 const SLOT_BG_COLOR := Color(0.06, 0.05, 0.12, 0.85)
 const SLOT_BORDER_COLOR := Color(0.5, 0.5, 1.0, 0.4)
@@ -33,12 +40,23 @@ var _abilities: Array = []
 var _slot_veils: Array[ColorRect] = []
 var _slot_flashes: Array[ColorRect] = []
 
+## Bound Health object (RefCounted; may be null).
+var _health: Object = null
+## Previous health value for detecting damage (hurt vignette trigger).
+var _health_prev: float = -1.0
+
 @onready var _toast: Label = $Toast
 @onready var _inventory_panel: InventoryPanel = $InventoryPanel
 @onready var _lumen_label: Label = $LumenBar/Margin/Body/Label
 @onready var _lumen_track: ColorRect = $LumenBar/Margin/Body/Track
 @onready var _lumen_fill: ColorRect = $LumenBar/Margin/Body/Track/Fill
 @onready var _ability_slots: HBoxContainer = $AbilitySlots
+@onready var _health_label: Label = $HealthBar/Margin/Body/Label
+@onready var _health_track: ColorRect = $HealthBar/Margin/Body/Track
+@onready var _health_fill: ColorRect = $HealthBar/Margin/Body/Track/Fill
+@onready var _hurt_vignette: ColorRect = $HurtVignette
+@onready var _death_overlay: ColorRect = $DeathOverlay
+@onready var _death_label: Label = $DeathOverlay/Label
 
 
 func _ready() -> void:
@@ -102,6 +120,37 @@ func bind_magic(well: Object, magic: Object, abilities: Array) -> void:
 		_on_well_changed(0.0, 100.0)
 
 
+## Wire the health bar to a Health object (scripts/systems/combat/health.gd).
+## health may be null — the bar shows 0/0 and stays inert until re-bound.
+func bind_health(health: Object) -> void:
+	if (
+		_health != null
+		and _health.has_signal("changed")
+		and _health.changed.is_connected(_on_health_changed)
+	):
+		_health.changed.disconnect(_on_health_changed)
+	_health = health
+	_health_prev = -1.0
+	if _health != null and _health.has_signal("changed"):
+		_health.changed.connect(_on_health_changed)
+	if _health != null and _health.has_method("current") and _health.has_method("max_health"):
+		_on_health_changed(_health.current(), _health.max_health())
+	else:
+		_on_health_changed(0.0, 0.0)
+
+
+## Show the death overlay with a countdown message. respawn_in_s is informational.
+func show_death(respawn_in_s: float) -> void:
+	_death_label.text = "THE DARK TAKES YOU\n\nRespawning in %ds..." % int(ceilf(respawn_in_s))
+	_death_overlay.visible = true
+	_death_overlay.modulate = Color(1.0, 1.0, 1.0, 1.0)
+
+
+## Hide the death overlay (call after respawn).
+func hide_death() -> void:
+	_death_overlay.visible = false
+
+
 ## Show a transient toast for awarded loot. registry may be null (raw ids shown).
 func show_loot(awarded: Array, registry: Object) -> void:
 	if awarded == null or awarded.is_empty():
@@ -142,6 +191,27 @@ func _toggle_inventory() -> void:
 # ---------------------------------------------------------------------------
 # Lumen bar
 # ---------------------------------------------------------------------------
+
+
+func _on_health_changed(current: float, max_hp: float) -> void:
+	var cap := maxf(max_hp, 0.001)
+	var ratio := clampf(current / cap, 0.0, 1.0)
+	_health_label.text = "HP %d / %d" % [int(roundf(current)), int(roundf(max_hp))]
+	_health_fill.color = HEALTH_LOW_COLOR.lerp(HEALTH_FULL_COLOR, ratio)
+	var track_w := _health_track.size.x
+	if track_w <= 0.0:
+		track_w = _health_track.custom_minimum_size.x
+	_health_fill.offset_right = track_w * ratio
+	# Flash hurt vignette only when health decreased.
+	if _health_prev >= 0.0 and current < _health_prev:
+		_flash_hurt()
+	_health_prev = current
+
+
+func _flash_hurt() -> void:
+	_hurt_vignette.modulate = Color(1.0, 1.0, 1.0, HURT_VIGNETTE_ALPHA)
+	var tween := create_tween()
+	tween.tween_property(_hurt_vignette, "modulate:a", 0.0, HURT_VIGNETTE_FADE)
 
 
 func _on_well_changed(current: float, capacity: float) -> void:
