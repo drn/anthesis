@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3 uid="uid://anthesis_remote_player"]
+
+[ext_resource type="Script" path="res://scripts/systems/net/remote_player.gd" id="1_rplayer"]
+
+[node name="RemotePlayer" type="Node3D"]
+script = ExtResource("1_rplayer")
