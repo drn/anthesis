@@ -72,6 +72,8 @@ func _process(_delta: float) -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	# has_action guards harnesses that run this scene without project.godot's
+	# input map loaded; is_action_pressed errors loudly on an unknown action.
 	if InputMap.has_action("toggle_inventory") and event.is_action_pressed("toggle_inventory"):
 		_toggle_inventory()
 		get_viewport().set_input_as_handled()
@@ -199,6 +201,9 @@ func _toggle_inventory() -> void:
 	if now_visible:
 		Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
 	else:
+		# Drop any focus a Craft button grabbed while the panel was open, so a
+		# focused control can't swallow hotkeys after the panel closes.
+		get_viewport().gui_release_focus()
 		Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
 
 

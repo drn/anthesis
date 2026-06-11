@@ -112,7 +112,7 @@ The editor binary lands at `tools/godot/macos_editor.app` (gitignored).
 
 Harvest glowing flora to fill your lumen well — magic costs lumen, and the
 flora's glow is also what keeps Umbrals from spawning near you. Craft a
-Sequencer Core plus Note Blocks (I) and arrange the blocks in a ring around
+Sequencer Core plus Note Blocks (press I) and arrange the blocks in a ring around
 the core: each block's angle picks its step in a 16-step loop synced to the
 soundtrack, and E retunes its pitch.
 
