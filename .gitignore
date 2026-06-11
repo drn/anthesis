@@ -1,0 +1,24 @@
+# Godot 4 cache and generated files
+.godot/
+
+# Legacy import cache (Godot 3)
+.import/
+
+# Godot translation binary caches
+*.translation
+
+# Export credentials (contains signing keys / passwords)
+export_credentials.cfg
+
+# Local tool binaries (Godot editor, etc.)
+tools/
+
+# macOS metadata
+.DS_Store
+**/.DS_Store
+
+# Temporary files
+*.tmp
+
+# Build output
+exports/

@@ -1,0 +1,66 @@
+# Default: normalize line endings to LF on commit
+* text=auto eol=lf
+
+# GDScript and Godot text formats
+*.gd text eol=lf
+*.tscn text eol=lf
+*.tres text eol=lf
+*.godot text eol=lf
+*.gdshader text eol=lf
+*.gdignore text eol=lf
+*.cfg text eol=lf
+*.json text eol=lf
+*.md text eol=lf
+*.txt text eol=lf
+*.svg text eol=lf
+*.xml text eol=lf
+*.html text eol=lf
+*.css text eol=lf
+*.toml text eol=lf
+*.yaml text eol=lf
+*.yml text eol=lf
+
+# Binary assets — no diff, no merge, no line-ending conversion
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.bmp binary
+*.webp binary
+*.ico binary
+
+# Fonts
+*.ttf binary
+*.otf binary
+*.woff binary
+*.woff2 binary
+
+# Audio
+*.wav binary
+*.ogg binary
+*.mp3 binary
+*.flac binary
+
+# 3D assets
+*.glb binary
+*.gltf binary
+*.fbx binary
+*.obj binary
+*.blend binary
+*.dae binary
+
+# Archives / packages
+*.zip binary
+*.tar binary
+*.gz binary
+*.7z binary
+
+# Godot import metadata (text, but treat as-is)
+*.import text eol=lf
+
+# Compiled / bytecode
+*.so binary
+*.dll binary
+*.dylib binary
+*.exe binary
+*.pck binary
