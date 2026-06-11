@@ -106,13 +106,13 @@ The editor binary lands at `tools/godot/macos_editor.app` (gitignored).
 | **1 / 2 / 3** | Cast: Lumen Bloom · Worldshaper Burst · Skyward Step |
 | **N** | Place a Sequencer Core (requires one in inventory) |
 | **B** | Place a Note Block (requires one in inventory) |
-| **Tab** | Inventory + crafting panel |
+| **I** | Inventory + crafting panel (toggle) |
 | **M** | Multiplayer panel (host / join) |
 | **Esc** | Release / recapture the mouse |
 
 Harvest glowing flora to fill your lumen well — magic costs lumen, and the
 flora's glow is also what keeps Umbrals from spawning near you. Craft a
-Sequencer Core plus Note Blocks (Tab) and arrange the blocks in a ring around
+Sequencer Core plus Note Blocks (press I) and arrange the blocks in a ring around
 the core: each block's angle picks its step in a 16-step loop synced to the
 soundtrack, and E retunes its pitch.
 

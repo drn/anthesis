@@ -1,5 +1,11 @@
 GODOT ?= tools/godot/macos_editor.app/Contents/MacOS/Godot
 
+# Sandbox the editor's user:// writes (settings, logs, shader cache) away from
+# the real home. Godot crashes in RotatedFileLogger if it cannot create
+# user://logs, so the directory must exist before any invocation.
+GODOT_HOME ?= /tmp/anthesis-home
+GODOT_RUN = mkdir -p $(GODOT_HOME) && HOME=$(GODOT_HOME) $(GODOT)
+
 .PHONY: setup edit run import test lint format format-check stems notes _ensure_import
 
 # Check that the Godot binary exists before targets that need it.
@@ -23,24 +29,24 @@ setup:
 _ensure_import: _check_godot
 	@if [ ! -f .godot/global_script_class_cache.cfg ]; then \
 		echo "No import cache found (fresh checkout) — running first import..."; \
-		$(GODOT) --headless --path . --import; \
+		$(GODOT_RUN) --headless --path . --import; \
 	fi
 
 ## Open the Godot editor (background).
 edit: _ensure_import
-	$(GODOT) --path . -e &
+	$(GODOT_RUN) --path . -e &
 
 ## Run the game directly.
 run: _ensure_import
-	$(GODOT) --path .
+	$(GODOT_RUN) --path .
 
 ## Import/reimport all assets headlessly (required before first test run).
 import: _check_godot
-	$(GODOT) --headless --path . --import
+	$(GODOT_RUN) --headless --path . --import
 
 ## Run the full GUT test suite (imports first).
 test: import
-	$(GODOT) --headless --path . \
+	$(GODOT_RUN) --headless --path . \
 		-s res://addons/gut/gut_cmdln.gd \
 		-gconfig=res://.gutconfig.json \
 		-gexit

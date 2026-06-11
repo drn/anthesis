@@ -202,7 +202,10 @@ Traps seen building phases 1-7. Check these before debugging from scratch:
 
 - **`HOME` override.** Every raw binary invocation must prefix
   `HOME=/tmp/anthesis-home` so the editor never writes to the real home. `make`
-  targets handle this; direct invocations do not.
+  targets handle this (via `GODOT_RUN`); direct invocations do not. The
+  directory must exist first — Godot segfaults in `RotatedFileLogger` when it
+  cannot create `user://logs` (e.g. sandboxed writes to the real home), so
+  `mkdir -p /tmp/anthesis-home` before any direct invocation.
 - **`--import` first.** A fresh worktree has no `.godot/imported/` cache. Run
   `make import` (or `<binary> --headless --path . --import`) before the first
   test run or after adding any `.tres` / asset, or you get missing-import errors.
@@ -216,9 +219,12 @@ Traps seen building phases 1-7. Check these before debugging from scratch:
   hand-rolled bit math overflows 32-bit and wraps silently.
 - **Callable GC.** A `Callable` seam (clock-tick fn, `voxel_tool` provider) is
   collected if nothing holds its owning object. Store the owner, not just the fn.
-- **gdlint ceilings.** `gdlint` caps public methods per class. World is at the cap
+- **gdlint ceilings.** `gdlint` caps public methods per class (20). World is at the cap
   — `SimulationClock` is fetched via `get_node("SimulationClock")`, not a getter.
   Don't add gratuitous getters near the cap; gate introspection on named nodes.
+  Test files hit it too (every `test_*` func is public): the convention is to
+  split into a focused sibling file (see `test_cast_command.gd`,
+  `test_inventory_hotkey.gd`), not to disable the check.
 - **`.tres` typed-array syntax.** Use `field = Array[ExtResource("2")]([SubResource("x")])`,
   not a bare `[...]`. Copy an existing `.tres` exactly (e.g. `voidmoth.tres`).
 - **`connected_to_server` deferral.** RPCs to the host before the ENet handshake
