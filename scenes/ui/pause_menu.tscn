@@ -1,0 +1,167 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/pause_menu.gd" id="1"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBox_panel"]
+bg_color = Color(0.06, 0.05, 0.12, 0.92)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.4, 0.5, 1.0, 0.4)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
+[node name="PauseMenu" type="Control"]
+process_mode = 3
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 1
+script = ExtResource("1")
+
+[node name="Dim" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.0, 0.0, 0.02, 0.55)
+
+[node name="Center" type="CenterContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Panel" type="PanelContainer" parent="Center"]
+custom_minimum_size = Vector2(620, 0)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBox_panel")
+
+[node name="Margin" type="MarginContainer" parent="Center/Panel"]
+layout_mode = 2
+theme_override_constants/margin_left = 26
+theme_override_constants/margin_top = 22
+theme_override_constants/margin_right = 26
+theme_override_constants/margin_bottom = 22
+
+[node name="Body" type="VBoxContainer" parent="Center/Panel/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="Title" type="Label" parent="Center/Panel/Margin/Body"]
+layout_mode = 2
+text = "PAUSED"
+horizontal_alignment = 1
+theme_override_colors/font_color = Color(0.85, 0.92, 1.0, 1.0)
+theme_override_font_sizes/font_size = 22
+
+[node name="SettingsTitle" type="Label" parent="Center/Panel/Margin/Body"]
+layout_mode = 2
+text = "SETTINGS"
+theme_override_colors/font_color = Color(0.75, 0.55, 1.0, 1.0)
+theme_override_font_sizes/font_size = 14
+
+[node name="SensitivityRow" type="HBoxContainer" parent="Center/Panel/Margin/Body"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="Label" type="Label" parent="Center/Panel/Margin/Body/SensitivityRow"]
+custom_minimum_size = Vector2(170, 0)
+layout_mode = 2
+text = "Mouse Sensitivity"
+theme_override_colors/font_color = Color(0.6, 0.75, 0.95, 1.0)
+theme_override_font_sizes/font_size = 13
+
+[node name="SensitivitySlider" type="HSlider" parent="Center/Panel/Margin/Body/SensitivityRow"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+min_value = 0.2
+max_value = 3.0
+step = 0.05
+value = 1.0
+
+[node name="SensitivityValue" type="Label" parent="Center/Panel/Margin/Body/SensitivityRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(56, 0)
+layout_mode = 2
+text = "1.00x"
+horizontal_alignment = 2
+theme_override_colors/font_color = Color(0.85, 0.92, 1.0, 1.0)
+theme_override_font_sizes/font_size = 13
+
+[node name="VolumeRow" type="HBoxContainer" parent="Center/Panel/Margin/Body"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="Label" type="Label" parent="Center/Panel/Margin/Body/VolumeRow"]
+custom_minimum_size = Vector2(170, 0)
+layout_mode = 2
+text = "Master Volume"
+theme_override_colors/font_color = Color(0.6, 0.75, 0.95, 1.0)
+theme_override_font_sizes/font_size = 13
+
+[node name="VolumeSlider" type="HSlider" parent="Center/Panel/Margin/Body/VolumeRow"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+max_value = 1.0
+step = 0.01
+value = 1.0
+
+[node name="VolumeValue" type="Label" parent="Center/Panel/Margin/Body/VolumeRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(56, 0)
+layout_mode = 2
+text = "100%"
+horizontal_alignment = 2
+theme_override_colors/font_color = Color(0.85, 0.92, 1.0, 1.0)
+theme_override_font_sizes/font_size = 13
+
+[node name="FullscreenCheck" type="CheckBox" parent="Center/Panel/Margin/Body"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Fullscreen"
+theme_override_font_sizes/font_size = 13
+
+[node name="BindingsTitle" type="Label" parent="Center/Panel/Margin/Body"]
+layout_mode = 2
+text = "KEY BINDINGS"
+theme_override_colors/font_color = Color(0.75, 0.55, 1.0, 1.0)
+theme_override_font_sizes/font_size = 14
+
+[node name="BindingsGrid" type="GridContainer" parent="Center/Panel/Margin/Body"]
+unique_name_in_owner = true
+layout_mode = 2
+columns = 4
+theme_override_constants/h_separation = 18
+theme_override_constants/v_separation = 4
+
+[node name="Buttons" type="HBoxContainer" parent="Center/Panel/Margin/Body"]
+layout_mode = 2
+alignment = 1
+theme_override_constants/separation = 12
+
+[node name="ResumeButton" type="Button" parent="Center/Panel/Margin/Body/Buttons"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(120, 0)
+layout_mode = 2
+text = "Resume"
+
+[node name="QuitButton" type="Button" parent="Center/Panel/Margin/Body/Buttons"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(120, 0)
+layout_mode = 2
+text = "Quit"

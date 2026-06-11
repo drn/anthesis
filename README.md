@@ -33,7 +33,7 @@ Exploration-first. **Umbrals** — shadow wisps with glowing cores — condense 
 |---|---|
 | ![Digging](docs/media/phase1-dig-trench.png) Carving the terrain | ![Inventory](docs/media/phase2-inventory-crafting.png) Inventory + crafting |
 | ![Magic](docs/media/phase3-lumen-bloom.png) Lumen Bloom cast | ![Combat](docs/media/phase4-combat-hit.png) Shardling combat |
-| ![Sequencer](docs/media/phase6-sequencer.png) The in-world music sequencer — a Core ringed by Note Blocks | |
+| ![Sequencer](docs/media/phase6-sequencer.png) The in-world music sequencer — a Core ringed by Note Blocks | ![Pause menu](docs/media/pause-menu.png) Pause menu — settings + key bindings |
 
 ---
 
@@ -108,7 +108,7 @@ The editor binary lands at `tools/godot/macos_editor.app` (gitignored).
 | **B** | Place a Note Block (requires one in inventory) |
 | **I** | Inventory + crafting panel (toggle) |
 | **M** | Multiplayer panel (host / join) |
-| **Esc** | Release / recapture the mouse |
+| **Esc** | Pause menu — settings (mouse sensitivity, volume, fullscreen) + key bindings |
 
 Harvest glowing flora to fill your lumen well — magic costs lumen, and the
 flora's glow is also what keeps Umbrals from spawning near you. Craft a

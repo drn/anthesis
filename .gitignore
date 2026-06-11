@@ -10,8 +10,8 @@
 # Export credentials (contains signing keys / passwords)
 export_credentials.cfg
 
-# Local tool binaries (Godot editor, etc.)
-tools/
+# Local tool binaries (Godot editor, etc.) — root only; scripts/tools/ is source
+/tools/
 
 # macOS metadata
 .DS_Store
@@ -25,3 +25,6 @@ exports/
 
 # Local agent phase artifacts
 .context/
+
+# Live-verification output (screenshots land here; PR copies go to docs/media/)
+artifacts/
