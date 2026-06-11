@@ -163,6 +163,20 @@ func test_lumen_fill_ratio_tracks_well() -> void:
 	)
 
 
+func test_lumen_pulse_rises_when_drained() -> void:
+	var well := FakeWell.new(100.0, 100.0)
+	var hud := _hud()
+	hud.bind_magic(well, null, [])
+	var mat := _fill_material(hud, "LumenOrb")
+	assert_almost_eq(
+		float(mat.get_shader_parameter("pulse")), 0.0, 0.001, "No alarm pulse at full lumen"
+	)
+	well.set_current(5.0)
+	assert_gt(
+		float(mat.get_shader_parameter("pulse")), 0.0, "Near-empty well drives a nonzero pulse"
+	)
+
+
 func test_meter_updates_survive_missing_material() -> void:
 	var health := FakeHealth.new(40.0, 40.0)
 	var hud := _hud()

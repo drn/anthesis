@@ -36,6 +36,7 @@ Exploration-first. **Umbrals** — shadow wisps with glowing cores — condense 
 | ![Digging](docs/media/phase1-dig-trench.png) Carving the terrain | ![Inventory](docs/media/phase2-inventory-crafting.png) Inventory + crafting |
 | ![Magic](docs/media/phase3-lumen-bloom.png) Lumen Bloom cast | ![Combat](docs/media/phase4-combat-hit.png) Shardling combat |
 | ![Sequencer](docs/media/phase6-sequencer.png) The in-world music sequencer — a Core ringed by Note Blocks | ![Pause menu](docs/media/pause-menu.png) Pause menu — settings + key bindings |
+| ![HUD](docs/media/hud-orbs-mid.png) Diablo-style HUD — liquid resource orbs, spell bar, quick belt | |
 
 ---
 

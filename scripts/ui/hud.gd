@@ -13,11 +13,12 @@ const TOAST_HOLD_SECONDS := 2.0
 ## Seconds the loot toast takes to fade from visible to transparent.
 const TOAST_FADE_SECONDS := 0.6
 
-## Lumen bar fill gradient endpoints (empty -> full).
+## Lumen orb fill gradient endpoints (empty -> full): cool cyan when drained,
+## saturating to magenta at capacity.
 const LUMEN_EMPTY_COLOR := Color(0.35, 0.85, 1.0, 1.0)
 const LUMEN_FULL_COLOR := Color(0.9, 0.35, 0.95, 1.0)
 
-## Health bar fill gradient endpoints (full -> low): Diablo-red when healthy,
+## Health orb fill gradient endpoints (full -> low): Diablo-red when healthy,
 ## heating toward hot orange as the pool drains.
 const HEALTH_FULL_COLOR := Color(0.85, 0.12, 0.18, 1.0)
 const HEALTH_LOW_COLOR := Color(1.0, 0.38, 0.08, 1.0)
@@ -253,6 +254,7 @@ func _build_quick_slots() -> void:
 		panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 
 		var margin := MarginContainer.new()
+		margin.name = "Margin"
 		margin.add_theme_constant_override("margin_left", 4)
 		margin.add_theme_constant_override("margin_top", 4)
 		margin.add_theme_constant_override("margin_right", 4)
@@ -261,11 +263,13 @@ func _build_quick_slots() -> void:
 		panel.add_child(margin)
 
 		var swatch := ColorRect.new()
+		swatch.name = "Swatch"
 		swatch.color = QUICK_EMPTY_COLOR
 		swatch.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		margin.add_child(swatch)
 
 		var count := Label.new()
+		count.name = "Count"
 		count.set_anchors_preset(Control.PRESET_FULL_RECT)
 		count.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 		count.vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM
@@ -281,7 +285,9 @@ func _build_quick_slots() -> void:
 		_quick_counts.append(count)
 
 
-## Repaint the belt from the first QUICK_SLOT_COUNT inventory slots.
+## Repaint the belt from the first QUICK_SLOT_COUNT inventory slots. No
+## tooltips: every belt node is MOUSE_FILTER_IGNORE (the mouse is captured
+## during play), so hover UI can never trigger.
 func _refresh_quick_slots() -> void:
 	for i in range(QUICK_SLOT_COUNT):
 		var data: Dictionary = {}
@@ -292,12 +298,9 @@ func _refresh_quick_slots() -> void:
 		if data.is_empty():
 			swatch.color = QUICK_EMPTY_COLOR
 			count.text = ""
-			swatch.tooltip_text = ""
 		else:
-			var id: StringName = data["id"]
-			swatch.color = _item_color(id)
+			swatch.color = _item_color(data["id"])
 			count.text = str(data["count"])
-			swatch.tooltip_text = _item_label(id)
 
 
 func _item_color(id: StringName) -> Color:
@@ -306,14 +309,6 @@ func _item_color(id: StringName) -> Color:
 		if def != null:
 			return def.swatch_color
 	return Color.WHITE
-
-
-func _item_label(id: StringName) -> String:
-	if _registry != null and _registry.has_method("item"):
-		var def: Object = _registry.item(id)
-		if def != null and not String(def.display_name).is_empty():
-			return def.display_name
-	return String(id)
 
 
 # ---------------------------------------------------------------------------
@@ -336,6 +331,7 @@ func _on_health_changed(current: float, max_hp: float) -> void:
 ## Push fill state into an orb's liquid shader. The ColorRect's color is kept
 ## as the source of truth for the fill palette; the shader reads it as a
 ## parameter so headless/material-stripped scenes degrade to a plain rect.
+## frame_color and back_color are static per-orb, set once in hud.tscn.
 func _update_meter(fill: ColorRect, ratio: float, pulse_threshold: float) -> void:
 	var mat := fill.material as ShaderMaterial
 	if mat == null:

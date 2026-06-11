@@ -22,15 +22,12 @@ func _make_inventory() -> Object:
 	return script.new(24, null) if script != null else null
 
 
-## Belt slot i -> its count label (PanelContainer > Margin > swatch > Label).
 func _belt_count_label(hud: Hud, i: int) -> Label:
-	var slot := hud.get_node(BELT_PATH).get_child(i)
-	return slot.get_child(0).get_child(0).get_child(0) as Label
+	return hud.get_node(BELT_PATH).get_child(i).get_node("Margin/Swatch/Count") as Label
 
 
 func _belt_swatch(hud: Hud, i: int) -> ColorRect:
-	var slot := hud.get_node(BELT_PATH).get_child(i)
-	return slot.get_child(0).get_child(0) as ColorRect
+	return hud.get_node(BELT_PATH).get_child(i).get_node("Margin/Swatch") as ColorRect
 
 
 func test_hud_has_quick_belt() -> void:

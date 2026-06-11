@@ -30,6 +30,9 @@ func _process(_delta: float) -> bool:
 
 	# Let terrain stream and the player land; top the well up so both orbs
 	# start visibly full, and grant items so the quick belt shows stacks.
+	# Direct add() here is intentional state SETUP, not the behavior under
+	# test — the verified actions below (damage, cast) route through the
+	# command bus per Hard Rule 4.
 	if _frame == 200:
 		_world.lumen_well().add(100.0)
 		_world.inventory().add(&"soil", 12)
