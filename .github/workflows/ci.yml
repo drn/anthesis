@@ -1,0 +1,123 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [master]
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: Lint (gdformat + gdlint)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install gdtoolkit
+        run: pip install "gdtoolkit==4.*"
+
+      - name: Collect lint targets
+        id: targets
+        run: |
+          # Only lint our own GDScript. addons/ is vendored and excluded.
+          # tests/integration may contain only .gitkeep on a fresh checkout,
+          # so we filter to directories that actually hold .gd files.
+          targets=""
+          for dir in scripts tests/unit tests/integration; do
+            if [ -d "$dir" ] && find "$dir" -name '*.gd' -print -quit | grep -q .; then
+              targets="$targets $dir"
+            fi
+          done
+          targets="$(echo "$targets" | xargs)"
+          echo "dirs=$targets" >> "$GITHUB_OUTPUT"
+          if [ -z "$targets" ]; then
+            echo "No .gd files found in scripts/ or tests/ — skipping lint."
+          else
+            echo "Lint targets: $targets"
+          fi
+
+      - name: gdformat --check
+        if: steps.targets.outputs.dirs != ''
+        run: gdformat --check ${{ steps.targets.outputs.dirs }}
+
+      - name: gdlint
+        if: steps.targets.outputs.dirs != ''
+        run: gdlint ${{ steps.targets.outputs.dirs }}
+
+  test:
+    name: Headless GUT suite
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      VOXEL_TAG: v1.6
+      VOXEL_ASSET: godot.linuxbsd.editor.x86_64.zip
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Cache Godot voxel binary
+        id: godot-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/godot-bin
+          key: godot-voxel-${{ env.VOXEL_TAG }}-linuxbsd-x86_64
+
+      - name: Download Godot (voxel build)
+        if: steps.godot-cache.outputs.cache-hit != 'true'
+        run: |
+          set -euo pipefail
+          mkdir -p "$HOME/godot-bin"
+          cd "$HOME/godot-bin"
+          url="https://github.com/Zylann/godot_voxel/releases/download/${VOXEL_TAG}/${VOXEL_ASSET}"
+          echo "Downloading $url"
+          curl -fL --retry 3 -o outer.zip "$url"
+          unzip -o outer.zip
+          rm -f outer.zip
+          # The outer zip may contain a nested *.zip (Zylann macOS pattern;
+          # be robust on Linux too). Unzip any nested archives we find.
+          while true; do
+            nested="$(find . -name '*.zip' -type f | head -n 1)"
+            [ -z "$nested" ] && break
+            echo "Extracting nested archive: $nested"
+            unzip -o "$nested"
+            rm -f "$nested"
+          done
+
+      - name: Resolve Godot binary path
+        run: |
+          set -euo pipefail
+          cd "$HOME/godot-bin"
+          # Prefer a name match for the linuxbsd build, then any *.x86_64,
+          # then any executable regular file.
+          bin="$(find . -type f \( -name 'godot*linuxbsd*' -o -name '*.x86_64' \) | head -n 1)"
+          if [ -z "$bin" ]; then
+            bin="$(find . -type f -perm -u+x ! -name '*.so' ! -name '*.zip' | head -n 1)"
+          fi
+          if [ -z "$bin" ]; then
+            echo "ERROR: could not resolve Godot binary in $HOME/godot-bin" >&2
+            find . -maxdepth 3 -type f >&2
+            exit 1
+          fi
+          abs="$(cd "$(dirname "$bin")" && pwd)/$(basename "$bin")"
+          chmod +x "$abs"
+          echo "Resolved Godot binary: $abs"
+          echo "GODOT_BIN=$abs" >> "$GITHUB_ENV"
+
+      - name: Print Godot version
+        run: '"$GODOT_BIN" --headless --version'
+
+      - name: Import assets
+        run: '"$GODOT_BIN" --headless --path . --import || true'
+
+      - name: Run GUT suite
+        run: '"$GODOT_BIN" --headless --path . -s res://addons/gut/gut_cmdln.gd -gconfig=res://.gutconfig.json -gexit'
