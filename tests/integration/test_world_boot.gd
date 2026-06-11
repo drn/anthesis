@@ -150,9 +150,11 @@ func test_place_request_routes_to_world_handler() -> void:
 
 func test_simulation_clock_present() -> void:
 	var world := _boot()
-	var clk := world.clock()
-	assert_not_null(clk, "clock() must return a SimulationClock")
-	assert_true(clk is SimulationClock, "clock() must be a SimulationClock")
+	# The clock is a named tree node (no public getter — keeps World under the
+	# public-method cap now that the Phase 7 net introspectors were added).
+	var clk := world.get_node_or_null("SimulationClock")
+	assert_not_null(clk, "a SimulationClock node must exist under World")
+	assert_true(clk is SimulationClock, "the SimulationClock node must be a SimulationClock")
 	assert_true(clk.is_inside_tree(), "the SimulationClock must be in the scene tree")
 
 

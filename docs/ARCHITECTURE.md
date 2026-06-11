@@ -256,6 +256,64 @@ transport — there is one clock for the whole game.
   (container provider + nearest-core lookup), and `SequencerCore.setup(transport_callable)`
   binding each freshly placed Core to the pad player's `get_playback_position()`.
 
+### Phase 7 — Host-Authority Co-op (live)
+
+Phase 7 promotes the command layer — designed from Phase 1 to be replication-ready — into
+**host-authoritative co-op**. Friends drop into the same world: terrain edits, sequencer
+blocks, and flora harvests replicate; everyone sees each other as glowing avatars. The game
+**defaults to OFFLINE** and runs the *identical* command flow solo, host, or client.
+
+- **Authority model.** Built on Godot high-level multiplayer (`ENetMultiplayerPeer`, `@rpc`).
+  The host is always peer 1. `NetworkSession` (`scripts/systems/net/`) wraps the peer lifecycle
+  and re-broadcasts engine multiplayer signals; crucially **OFFLINE counts as `has_authority()
+  == true`**, so the single-player path *is* the host path. Nothing is networked until the
+  `SessionPanel` (M) drives `host()` / `join()`.
+- **The router is the one seam.** Every player-intent command flows through
+  `CommandRouter.submit(cmd)` (`scripts/systems/net/`), never directly to the bus. It routes by
+  authority: **offline → `bus.execute`; host + replicable → validate, execute, log, broadcast
+  `commit_command`; client + replicable → `rpc_id(1, request_command)`; client + non-replicable
+  → execute locally.** The host validates inbound client commands (numeric range gate) before
+  committing. Every `@rpc` body is a one-liner delegating to a plain method (`_commit`,
+  `_handle_request`, `_handle_commit`, `_build_state`, `_handle_state`); transport funnels
+  through an overridable `_send`, so the whole protocol is unit-tested without a live peer.
+- **Replication scope.** Replicable = **shared-world** mutations: `DigCommand`, `PlaceCommand`,
+  `PlaceBlockCommand`, `RemoveBlockCommand`, `CycleNoteCommand`, `HarvestCommand`.
+  Client-local (non-replicable, stay on the originating peer) = **inventory / health / magic /
+  combat / crafting**: `CastCommand`, `DamageCommand`, `CraftCommand`. `CommandCodec`
+  (`scripts/core/net/`, pure static) is the wire format: it encodes commands to compact dicts
+  (`{t:"dig",c:[x,y,z],r}`, `{t:"rblock",path:"Block_3"}`, `{t:"harvest",idx,drops}`, …) and
+  decodes them back, resolving scene targets against the live world by **stable identifiers** —
+  a block's node name, a flora child index — returning `null` when the target has despawned so a
+  stale command is dropped. Block names are deterministic (`Block_%d`, monotonic per place) so
+  replay reproduces identical names.
+- **Late-join replay.** A joining client requests the host's snapshot (`request_state` →
+  `receive_state`): `{seed, log}`, where `log` is the host's `CommandLog`
+  (`scripts/core/net/`, bounded at 5000 entries, oldest dropped past that — a late joiner past
+  the bound reconstructs a *partial* world, an accepted v0 trade-off). The client then runs
+  `World.rebuild_for_session(seed, log)`: free + rebuild terrain / flora / blocks from the seed,
+  re-park the player, clear Umbrals, and **replay each logged command in commit order** through
+  the bus (not the router, so it applies without re-broadcasting). Determinism (seeded
+  `WorldSeed` + ordered replay + stable names) is what makes the rebuilt world match the host's.
+  Two timing notes: the client's `session_started(false)` (and therefore `request_state`) is
+  deferred until `connected_to_server` fires — RPCs sent before the ENet handshake completes are
+  silently dropped; and replayed terrain edits targeting chunks the client has not streamed in
+  yet no-op with an "Area not editable" warning (godot_voxel constraint) — a known v0 limitation,
+  acceptable near spawn where chunks stream immediately. Queuing edits until the area becomes
+  editable is the planned fix.
+- **Avatars.** `PlayerSync` (`scripts/systems/net/`) broadcasts the local player's
+  position + yaw every 0.1 s over an *unreliable* `@rpc`; the receiving side spawns a
+  `RemotePlayer` (a glowing cosmic capsule + halo + billboard peer-id label) on demand and lerps
+  it (snap beyond 8 m). Avatars are freed on `peer_left` and cleared on `session_ended`.
+- **Trust model (v0).** This is **co-op for friends, not anti-cheat.** The host range-gates
+  numeric fields but does not otherwise authenticate intent; inventory/health/magic are
+  client-trusted. **Umbrals (combat) are host-only and *not* synced** in v0 — a non-authoritative
+  client skips spawn planning entirely and holds no creatures; combat damage stays local to the
+  peer that dealt it. Documented and intentional.
+- **Live verification.** `scripts/tools/net_smoke/{host_test.gd,client_test.gd}` are
+  `SceneTree` scripts (NOT in the GUT suite) that boot two real world instances on loopback and
+  assert the replication path end-to-end (`HOST_OK` + `CLIENT_GOT_DIG`); invocation is in each
+  file's header.
+
 ---
 
 ## Systems as Autonomous Modules
@@ -311,8 +369,12 @@ This ensures:
 scenes/           scene files (.tscn)
 scripts/
   core/           foundational classes (WorldSeed, Command base, tick loop)
+    commands/     WorldCommand subclasses + CommandBus + WorldContext
+    net/          replication wire format (CommandCodec, CommandLog)
   systems/        autonomous game systems (crafting, magic, inventory, audio)
+    net/          co-op runtime (NetworkSession, CommandRouter, PlayerSync, RemotePlayer)
   ui/             UI controllers
+  tools/          dev/SceneTree scripts (asset gen, net_smoke live test)
 resources/        .tres content files (items, biomes, recipes, ...)
 shaders/          .glsl / .gdshader files
 assets/           textures, audio, models (binary, gitignored in large forms)

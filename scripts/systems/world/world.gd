@@ -34,6 +34,7 @@ const _FLOWER_SCENE := preload("res://scenes/props/glow_flower.tscn")
 const _CRYSTAL_SCENE := preload("res://scenes/props/crystal.tscn")
 const _HUD_SCENE := preload("res://scenes/ui/hud.tscn")
 const _LUMEN_BLOOM_SCENE := preload("res://scenes/props/lumen_bloom.tscn")
+const _SESSION_PANEL_SCENE := preload("res://scenes/ui/session_panel.tscn")
 
 ## Item/recipe data and inventory sizing (Phase 2).
 const INVENTORY_SIZE := 24
@@ -116,6 +117,16 @@ var _music: MusicSystem
 var _blocks: Node3D
 var _block_place: BlockPlacementService
 
+## Networking (Phase 7 contract #9). Default OFFLINE: nothing networks until the
+## SessionPanel drives host()/join(). The router is the single seam every
+## player-intent command flows through.
+var _session: NetworkSession
+var _router: CommandRouter
+var _command_log: CommandLog
+var _player_sync: PlayerSync
+var _remote_players: Node3D
+var _session_panel: SessionPanel
+
 var _poll_elapsed := 0.0
 var _player_placed := false
 var _flora_scattered := false
@@ -136,6 +147,7 @@ func _ready() -> void:
 	_build_hud()
 	_build_music()
 	_build_sequencer()
+	_build_net()
 	# Park the player up high until terrain streams in, then drop them onto it.
 	_player.global_position = Vector3(0.0, PLAYER_SAFE_ALTITUDE, 0.0)
 
@@ -195,11 +207,6 @@ func hud() -> Hud:
 	return _hud
 
 
-## The fixed-timestep simulation clock driving magic cooldowns.
-func clock() -> SimulationClock:
-	return _clock
-
-
 ## The player's Lumen well.
 func lumen_well() -> LumenWell:
 	return _well
@@ -243,6 +250,21 @@ func blocks_container() -> Node3D:
 ## The sequencer block placement/removal service (Phase 6).
 func block_place() -> BlockPlacementService:
 	return _block_place
+
+
+## The multiplayer session (Phase 7). OFFLINE until host()/join() is driven.
+func session() -> NetworkSession:
+	return _session
+
+
+## The authority-aware command router every player intent flows through (Phase 7).
+func router() -> CommandRouter:
+	return _router
+
+
+## The bounded host-side command log used for late-join replay (Phase 7).
+func command_log() -> CommandLog:
+	return _command_log
 
 
 # ---------------------------------------------------------------------------
@@ -529,6 +551,143 @@ func _lock_new_cores_to_transport() -> void:
 
 
 # ---------------------------------------------------------------------------
+# Networking (Phase 7 contract #9 — host-authority co-op)
+# ---------------------------------------------------------------------------
+
+
+## Stand up the networking layer and wire it to the rest of the game.
+##
+## Everything here defaults to OFFLINE: the [NetworkSession] holds no peer until
+## the [SessionPanel] (M) drives host()/join(), and [method has_authority] reports
+## true so the solo path runs the identical command flow as the host. The
+## [CommandRouter] is the single seam [method submit] that all player intents
+## route through — see [method _on_dig_requested] et al. The [CommandLog] backs
+## late-join replay, [PlayerSync] broadcasts/receives avatar positions, and the
+## panel lives in the HUD's CanvasLayer so it overlays the world.
+func _build_net() -> void:
+	_session = NetworkSession.new()
+	_session.name = "NetworkSession"
+	add_child(_session)
+
+	_command_log = CommandLog.new()
+
+	_router = CommandRouter.new()
+	_router.name = "CommandRouter"
+	add_child(_router)
+	_router.setup(_session, _command_bus, self, _command_log)
+	_router.state_received.connect(_on_state_received)
+
+	# Remote-peer avatars live under a dedicated container.
+	_remote_players = Node3D.new()
+	_remote_players.name = "RemotePlayers"
+	add_child(_remote_players)
+
+	_player_sync = PlayerSync.new()
+	_player_sync.name = "PlayerSync"
+	add_child(_player_sync)
+	_player_sync.setup(_session, _player, _remote_players)
+
+	# Session panel: lives in the HUD CanvasLayer so it overlays gameplay. The
+	# panel only emits intent signals; World owns the session lifecycle.
+	_session_panel = _SESSION_PANEL_SCENE.instantiate()
+	_hud.add_child(_session_panel)
+	_session_panel.bind(_session)
+	_session_panel.host_requested.connect(_on_host_requested)
+	_session_panel.join_requested.connect(_on_join_requested)
+	_session_panel.leave_requested.connect(_on_leave_requested)
+
+	# On a fresh client join, pull the host's world state and replay it.
+	_session.session_started.connect(_on_session_started)
+
+
+## Panel asked to host: open a server on the default port.
+func _on_host_requested() -> void:
+	_session.host()
+
+
+## Panel asked to join [param address] on the default port.
+func _on_join_requested(address: String) -> void:
+	_session.join(address)
+
+
+## Panel asked to leave: tear the session down (returns to OFFLINE / solo).
+func _on_leave_requested() -> void:
+	_session.leave()
+
+
+## A session became active. A joining client (not hosting) requests the host's
+## full world snapshot so it can rebuild + replay; the host has nothing to pull.
+func _on_session_started(hosting: bool) -> void:
+	if not hosting:
+		_router.request_state.rpc_id(NetworkSession.HOST_PEER_ID)
+
+
+## The host's late-join snapshot arrived: rebuild the world from its seed and
+## replay every logged command so this client matches the shared world.
+func _on_state_received(state: Dictionary) -> void:
+	var new_seed: int = int(state.get("seed", seed_value))
+	var log_entries: Array = state.get("log", [])
+	rebuild_for_session(new_seed, log_entries)
+
+
+## Rebuild terrain / flora / blocks for [param new_seed] then replay
+## [param log_entries] (encoded [CommandCodec] dicts) in order.
+##
+## Used by a late-joining client after the host's snapshot arrives. The player is
+## re-parked, Umbrals are cleared (host-authority spawns them; clients never do),
+## and the music/intensity state is left running. Replay routes each decoded
+## command straight through the [CommandBus] (not the router) so it is applied
+## locally without re-broadcasting.
+func rebuild_for_session(new_seed: int, log_entries: Array) -> void:
+	seed_value = new_seed
+	_world_seed = WorldSeed.new(seed_value)
+
+	# Rebuild terrain with the new seed.
+	if is_instance_valid(_voxel_world):
+		_voxel_world.queue_free()
+		remove_child(_voxel_world)
+	_build_terrain()
+
+	# Clear and rebuild the flora subtree (re-scattered once terrain streams in).
+	for child in _flora.get_children():
+		child.queue_free()
+	_flora_scattered = false
+
+	# Clear placed blocks; replay will re-create them with identical names.
+	for child in _blocks.get_children():
+		child.queue_free()
+
+	# Clear blooms and Umbrals (host-only; clients hold none).
+	for child in _blooms.get_children():
+		child.queue_free()
+	for child in _umbrals.get_children():
+		if child is Umbral:
+			_combat.unregister((child as Umbral).get_instance_id())
+		child.queue_free()
+
+	# Re-park the player; deferred placement drops them once terrain streams in.
+	_player_placed = false
+	_poll_elapsed = 0.0
+	_player.global_position = Vector3(0.0, PLAYER_SAFE_ALTITUDE, 0.0)
+	_player.velocity = Vector3.ZERO
+	set_process(true)
+
+	# Replay the host's committed history in order.
+	_replay_log(log_entries)
+
+
+## Decode and apply each entry in [param log_entries] through the bus, in order.
+## Undecodable / stale entries (despawned targets) are skipped.
+func _replay_log(log_entries: Array) -> void:
+	for entry in log_entries:
+		if not (entry is Dictionary):
+			continue
+		var cmd := CommandCodec.decode(entry, self)
+		if cmd != null:
+			_command_bus.execute(cmd)
+
+
+# ---------------------------------------------------------------------------
 # Deferred placement (terrain streams in asynchronously)
 # ---------------------------------------------------------------------------
 
@@ -551,15 +710,15 @@ func _scatter_flora() -> void:
 
 
 func _on_dig_requested(world_pos: Vector3, radius: float) -> void:
-	_command_bus.execute(DigCommand.new(world_pos, radius))
+	_router.submit(DigCommand.new(world_pos, radius))
 
 
 func _on_place_requested(world_pos: Vector3, radius: float) -> void:
-	_command_bus.execute(PlaceCommand.new(world_pos, radius))
+	_router.submit(PlaceCommand.new(world_pos, radius))
 
 
 func _on_harvest_requested(target: Node, drops: Array[ItemAmount]) -> void:
-	_command_bus.execute(HarvestCommand.new(target, drops))
+	_router.submit(HarvestCommand.new(target, drops))
 
 
 ## Map a 1-indexed ability slot to its [AbilityDef] and cast it through the bus.
@@ -573,26 +732,29 @@ func _on_cast_requested(slot: int, target_pos: Vector3) -> void:
 	var index := slot - 1
 	if index < 0 or index >= abilities.size():
 		return
-	_command_bus.execute(CastCommand.new(abilities[index], target_pos))
+	# Casting is client-local (non-replicable); the router executes it on the
+	# originating peer only.
+	_router.submit(CastCommand.new(abilities[index], target_pos))
 
 
 func _on_craft_requested(recipe: Recipe) -> void:
-	_command_bus.execute(CraftCommand.new(recipe))
+	# Crafting is client-local (non-replicable); routed for a single seam.
+	_router.submit(CraftCommand.new(recipe))
 
 
 ## Route a block placement intent (N / B) through the command layer.
 func _on_place_block_requested(item_id: StringName, position: Vector3) -> void:
-	_command_bus.execute(PlaceBlockCommand.new(item_id, position))
+	_router.submit(PlaceBlockCommand.new(item_id, position))
 
 
 ## Route a Note Block interaction (E) into a pitch-cycle through the bus.
 func _on_block_interact_requested(target: Node) -> void:
-	_command_bus.execute(CycleNoteCommand.new(target))
+	_router.submit(CycleNoteCommand.new(target))
 
 
 ## Route a block removal intent (F on a block) through the command layer.
 func _on_block_remove_requested(target: Node) -> void:
-	_command_bus.execute(RemoveBlockCommand.new(target))
+	_router.submit(RemoveBlockCommand.new(target))
 
 
 # ---------------------------------------------------------------------------
@@ -607,12 +769,20 @@ func _on_strike_requested(target_id: int, _hit_point: Vector3) -> void:
 	if forward.length() > 0.0:
 		forward = forward.normalized()
 	var knockback := forward * STRIKE_KNOCKBACK_FORWARD + Vector3.UP * STRIKE_KNOCKBACK_UP
-	_command_bus.execute(DamageCommand.new(target_id, PLAYER_STRIKE_DAMAGE, knockback))
+	# Combat is client-local (non-replicable) in v0: damage stays on the peer
+	# that dealt it. Umbrals are host-only, so on a client this no-ops harmlessly.
+	_router.submit(DamageCommand.new(target_id, PLAYER_STRIKE_DAMAGE, knockback))
 
 
 ## Drive deterministic Umbral spawning and far-despawn each simulation tick.
+##
+## HOST-ONLY in a session: Umbrals are local-host-side in v0 and are not synced,
+## so a non-authoritative client skips spawn planning entirely (it holds no
+## creatures). Offline (solo) still has authority and spawns as before.
 func _on_combat_tick(tick_index: int) -> void:
 	if not _player_placed:
+		return
+	if not _session.has_authority():
 		return
 	_despawn_distant_umbrals()
 	var alive := _umbrals.get_child_count()
@@ -660,7 +830,9 @@ func _on_umbral_attack(damage: float, umbral: Umbral) -> void:
 	if away.length() > 0.0:
 		away = away.normalized()
 	var knockback := away * HURT_KNOCKBACK_FORCE + Vector3.UP * STRIKE_KNOCKBACK_UP
-	_command_bus.execute(DamageCommand.new(_player.get_instance_id(), damage, knockback))
+	# Damage is client-local (non-replicable); Umbral contact only happens on the
+	# host where Umbrals live, so this stays host-local in a session.
+	_router.submit(DamageCommand.new(_player.get_instance_id(), damage, knockback))
 
 
 ## An Umbral dissolved: award its drops + lumen and drop it from the registry.

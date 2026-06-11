@@ -209,3 +209,48 @@ func test_remove_emits_block_removed() -> void:
 	watch_signals(_service)
 	_service.remove(block)
 	assert_signal_emitted(_service, "block_removed")
+
+
+# ---------------------------------------------------------------------------
+# Deterministic block names / spawn counter (Phase 7 replication)
+# ---------------------------------------------------------------------------
+
+
+func test_spawn_count_starts_zero() -> void:
+	assert_eq(_service.spawn_count(), 0, "no blocks spawned yet")
+
+
+func test_blocks_named_sequentially() -> void:
+	_inventory.add(&"note_block", 3)
+	_service.place(&"note_block", Vector3.ZERO)
+	_service.place(&"note_block", Vector3(2.0, 0.0, 0.0))
+	_service.place(&"note_block", Vector3(4.0, 0.0, 0.0))
+	var names: Array = []
+	for b in _service.blocks():
+		names.append(String(b.name))
+	assert_eq(names, ["Block_0", "Block_1", "Block_2"], "names increment in place order")
+
+
+func test_spawn_count_increments_per_success() -> void:
+	_inventory.add(&"note_block", 2)
+	_service.place(&"note_block", Vector3.ZERO)
+	assert_eq(_service.spawn_count(), 1, "one successful place")
+	_service.place(&"note_block", Vector3(2.0, 0.0, 0.0))
+	assert_eq(_service.spawn_count(), 2, "two successful places")
+
+
+func test_spawn_count_unchanged_on_refusal() -> void:
+	# No stock -> refused -> counter must not advance.
+	_service.place(&"note_block", Vector3.ZERO)
+	assert_eq(_service.spawn_count(), 0, "refused placement does not bump counter")
+
+
+func test_names_unique_across_kinds() -> void:
+	_inventory.add(&"note_block", 1)
+	_inventory.add(&"sequencer_core", 1)
+	_service.place(&"note_block", Vector3.ZERO)
+	_service.place(&"sequencer_core", Vector3(3.0, 0.0, 0.0))
+	var names: Array = []
+	for b in _service.blocks():
+		names.append(String(b.name))
+	assert_eq(names, ["Block_0", "Block_1"], "counter spans both block kinds")

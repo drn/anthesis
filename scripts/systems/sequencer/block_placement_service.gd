@@ -51,6 +51,11 @@ var _inventory: Inventory
 var _container_provider: Callable
 var _core_lookup: Callable
 
+## Monotonic counter feeding deterministic block names. Increments once per
+## successful [method place]. Late-join replay reproduces identical names
+## because placements replay in the same order they were committed.
+var _spawn_counter: int = 0
+
 
 ## Construct with the player [param inventory] that placement charges/refunds,
 ## a [param container_provider] returning the [Node3D] blocks live under, and a
@@ -84,6 +89,10 @@ func place(item_id: StringName, position: Vector3) -> bool:
 		return false
 	var snapped := _snap(position)
 	var container := _container()
+	# Name the block deterministically and sequentially so replicated /
+	# late-join replays resolve the same node by name across peers.
+	block.name = "Block_%d" % _spawn_counter
+	_spawn_counter += 1
 	if container != null:
 		container.add_child(block)
 	block.global_position = snapped
@@ -126,6 +135,14 @@ func blocks() -> Array:
 		if is_instance_valid(child):
 			out.append(child)
 	return out
+
+
+## Number of blocks spawned so far; also the name index of the next block.
+##
+## Equals the next [code]Block_N[/code] suffix [method place] will assign. Used
+## by replication to confirm two peers agree on placement order.
+func spawn_count() -> int:
+	return _spawn_counter
 
 
 # ---------------------------------------------------------------------------
