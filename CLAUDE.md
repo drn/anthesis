@@ -45,6 +45,84 @@ Headless test invocation (for reference):
 
 ---
 
+## Documentation Map
+
+Every doc, what it covers, and when to read it:
+
+| Doc | Covers |
+|-----|--------|
+| `README.md` | Project status, screenshot gallery, controls, quick start |
+| `CLAUDE.md` (this file) | AI build conventions, hard rules, layout, cookbook, gotchas |
+| `AGENTS.md` | One-page mirror of the essentials for any agent |
+| `CONTRIBUTING.md` | Human contributor workflow |
+| `docs/ARCHITECTURE.md` | The layer model + per-phase subsections — read before structural changes |
+| `docs/COMMANDS.md` | The command/intent layer all world mutations route through |
+| `docs/systems/*.md` | Per-system deep dives (extend-this-system docs); one file per system |
+
+Per-system docs under `docs/systems/` go deeper than the architecture doc: each
+is an "I need to extend this system" guide (key files, real flow with real symbol
+names, how-to-extend steps, which tests to copy, gotchas).
+
+---
+
+## Verification
+
+Two repo skills under `.claude/skills/` capture the workflows that ship phases:
+
+- **`verify-live`** — boot the real `world.tscn` windowed via a `SceneTree`
+  harness, drive gameplay through `world.command_bus().execute(...)`, screenshot
+  the framebuffer, and check for script errors. Use to prove a change works in
+  the running game (not just in tests) and to make PR media.
+- **`new-phase`** — the pinned-contract parallel workflow that built phases 1-7:
+  scout → contracts → strict file ownership → parallel builders → integrator →
+  skeptic → live verify → PR + squash-merge.
+
+Live-harness one-liner (windowed; never `--headless` for visual verification):
+
+```bash
+HOME=/tmp/anthesis-home tools/godot/macos_editor.app/Contents/MacOS/Godot \
+  --path . -s res://scripts/tools/verify/<name>.gd
+```
+
+The full GUT suite (note the same `HOME` override):
+
+```bash
+HOME=/tmp/anthesis-home tools/godot/macos_editor.app/Contents/MacOS/Godot \
+  --headless --path . -s res://addons/gut/gut_cmdln.gd \
+  -gconfig=res://.gutconfig.json -gexit
+```
+
+Lint / format (gdtoolkit 4.x):
+
+```bash
+find scripts tests -name "*.gd" | xargs uvx --from "gdtoolkit==4.*" gdformat
+find scripts tests -name "*.gd" | xargs uvx --from "gdtoolkit==4.*" gdlint
+```
+
+---
+
+## Adding Content Cookbook
+
+All game content is data (`.tres`), loaded by a registry, wired by `World`.
+Mutations route through the command bus. Quick map of "I want to add X":
+
+| Add a… | Create | Wired / loaded by | Deep dive |
+|--------|--------|-------------------|-----------|
+| Item | `resources/items/<id>.tres` (`ItemDef`) | `ItemRegistry` (auto-scans dir) | `docs/systems/CRAFTING.md` |
+| Recipe | `resources/recipes/<id>.tres` (`Recipe`) | `ItemRegistry` / `CraftingService` | `docs/systems/CRAFTING.md` |
+| Ability | `resources/abilities/<id>.tres` (`AbilityDef`) + effect `Callable` in `world.gd` `_install_ability_effects` (`kind`→fn) | `AbilityRegistry` + `MagicSystem` | `docs/systems/MAGIC.md` |
+| Creature | `resources/creatures/<id>.tres` (`CreatureDef`) | `CreatureRegistry` + `SpawnSystem` | `docs/systems/COMBAT.md` |
+| Music stem | `resources/music/<id>.tres` (`MusicStemDef`) + WAV via `make stems` | `MusicStemRegistry` + `MusicSystem` | `docs/systems/MUSIC.md` |
+| Command | `scripts/core/commands/<name>_command.gd` (`extends WorldCommand`) + a `WorldContext` field if it needs a new service + `CommandCodec` case if replicable | `CommandBus` / `CommandRouter` | `docs/COMMANDS.md` |
+
+Rules of thumb: a new ability `kind` needs **both** a `.tres` (data) and an effect
+`Callable` registered in `world.gd` (behavior). A new replicable command needs a
+`CommandCodec.encode`/`decode` case or it stays client-local. Registries auto-scan
+their directory — no code edit to add a pure-data item/recipe/creature/stem. Copy
+an existing `.tres` for the exact typed-array / sub-resource syntax.
+
+---
+
 ## Hard Rules
 
 These rules are non-negotiable. Every agent, every PR, every change.
@@ -106,11 +184,48 @@ shaders/             GLSL / Godot shaders
 assets/              Art, audio, fonts (binary, gitignored if large)
 tests/unit/          GUT unit tests
 tests/integration/   GUT integration tests
+scripts/tools/verify/ Live SceneTree verification harnesses (windowed; NOT in GUT suite)
 addons/              Vendored (GUT, godot_voxel) — DO NOT MODIFY
 docs/                Design docs and architecture
+docs/systems/        Per-system deep dives (one .md per system)
+docs/media/          PR/README screenshots (committed)
+.claude/skills/      Repo skills (verify-live, new-phase)
 tools/               Local binaries (gitignored)
 scripts/             Shell scripts (setup.sh, etc.) + GDScript subdirs
 ```
+
+---
+
+## Known Gotchas
+
+Traps seen building phases 1-7. Check these before debugging from scratch:
+
+- **`HOME` override.** Every raw binary invocation must prefix
+  `HOME=/tmp/anthesis-home` so the editor never writes to the real home. `make`
+  targets handle this; direct invocations do not.
+- **`--import` first.** A fresh worktree has no `.godot/imported/` cache. Run
+  `make import` (or `<binary> --headless --path . --import`) before the first
+  test run or after adding any `.tres` / asset, or you get missing-import errors.
+- **`height_at` returns NAN.** Terrain streams asynchronously; `VoxelWorld.height_at`
+  returns `NAN` until the chunk streams in. Gate all position-dependent logic on
+  `not is_nan(...)`. World parks the player at `PLAYER_SAFE_ALTITUDE` and polls.
+- **`ZN_FastNoiseLite` type trap.** `VoxelGeneratorNoise.noise` is typed to Godot's
+  built-in `FastNoiseLite`, not `godot_voxel`'s `ZN_FastNoiseLite`. Use built-in
+  `FastNoiseLite` (`frequency` directly) — see `voxel_world.gd`.
+- **int64 literals.** Keep seed/hash math inside `WorldSeed.derive(...)` streams;
+  hand-rolled bit math overflows 32-bit and wraps silently.
+- **Callable GC.** A `Callable` seam (clock-tick fn, `voxel_tool` provider) is
+  collected if nothing holds its owning object. Store the owner, not just the fn.
+- **gdlint ceilings.** `gdlint` caps public methods per class. World is at the cap
+  — `SimulationClock` is fetched via `get_node("SimulationClock")`, not a getter.
+  Don't add gratuitous getters near the cap; gate introspection on named nodes.
+- **`.tres` typed-array syntax.** Use `field = Array[ExtResource("2")]([SubResource("x")])`,
+  not a bare `[...]`. Copy an existing `.tres` exactly (e.g. `voidmoth.tres`).
+- **`connected_to_server` deferral.** RPCs to the host before the ENet handshake
+  are silently dropped. `NetworkSession` defers `session_started(false)` until
+  `connected_to_server` — never RPC the host the instant after `join()`.
+- **Parallel file collisions.** `project.godot` and `world.gd` are integrator-only
+  (see `new-phase`). Builders never edit them, or parallel work collides on merge.
 
 ---
 

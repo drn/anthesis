@@ -92,6 +92,27 @@ Violations of these rules will be caught in review and must be fixed before merg
 
 ---
 
+## Documentation Map
+
+Start here and follow the chain for the depth you need:
+
+| Doc | Audience / purpose |
+|-----|--------------------|
+| [README.md](README.md) | Project overview, status, gallery, controls |
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Layer model, command/intent layer, all 7 phases, data-driven content, deterministic RNG, directory layout — read before any structural change |
+| [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) | Environment setup (nested-zip, `HOME` override), every `make` target, edit/run/test loop, screenshot-verification harness pattern, debugging tips |
+| [docs/TESTING.md](docs/TESTING.md) | GUT conventions, full test-file index, testability patterns (pure-logic classes, fake/stub patterns, determinism testing), CI pipeline anatomy |
+| [docs/COMMANDS.md](docs/COMMANDS.md) | Command/intent layer reference — every `WorldCommand` subclass, `CommandBus`, `WorldContext` fields |
+| [CONTRIBUTING.md](CONTRIBUTING.md) | This file — quick rules, PR checklist, style guide |
+| [AGENTS.md](AGENTS.md) | Orchestration notes for AI agents working in this repo |
+| [CLAUDE.md](CLAUDE.md) | Claude Code / AI agent conventions and hard rules |
+
+For per-system depth (magic, combat, sequencer, audio, networking), read the relevant
+subsection in `docs/ARCHITECTURE.md`, then the corresponding test files listed in
+`docs/TESTING.md`.
+
+---
+
 ## Opening Issues
 
 Bug reports and feature proposals welcome. For large changes, open an issue and discuss before writing code — it saves everyone time.
