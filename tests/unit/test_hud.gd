@@ -62,6 +62,9 @@ func test_hud_bind_exists() -> void:
 	assert_true(hud.has_method("bind"), "HUD must expose bind()")
 	assert_true(hud.has_method("show_loot"), "HUD must expose show_loot()")
 	assert_true(hud.has_method("bind_magic"), "HUD must expose bind_magic()")
+	assert_true(hud.has_method("bind_health"), "HUD must expose bind_health()")
+	assert_true(hud.has_method("show_death"), "HUD must expose show_death()")
+	assert_true(hud.has_method("hide_death"), "HUD must expose hide_death()")
 
 
 func test_hud_inventory_panel_hidden_by_default() -> void:

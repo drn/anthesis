@@ -1,0 +1,25 @@
+[gd_resource type="Resource" script_class="CreatureDef" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/core/combat/creature_def.gd" id="1"]
+[ext_resource type="Script" path="res://scripts/core/items/item_amount.gd" id="2"]
+
+[sub_resource type="Resource" id="drop_1"]
+script = ExtResource("2")
+item_id = &"crystal_shard"
+count = 2
+
+[resource]
+script = ExtResource("1")
+id = &"shardling"
+display_name = "Shardling"
+max_health = 30.0
+move_speed = 2.4
+attack_damage = 9.0
+attack_range = 1.9
+aggro_range = 11.0
+attack_cooldown_ticks = 18
+wander_radius = 6.0
+drops = Array[ExtResource("2")]([SubResource("drop_1")])
+lumen_reward = 8.0
+core_color = Color(0.3, 0.7, 1.0, 1)
+body_scale = 1.15

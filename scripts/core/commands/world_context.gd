@@ -32,3 +32,7 @@ var ability_effects: Dictionary = {}
 ## Callable(amount: float) that adds gathered lumen to the player's well.
 ## Set by World during wiring. May be an invalid Callable in test contexts.
 var lumen_gain: Callable = Callable()
+
+## Combatant registry and damage router. Hits route through it via
+## [DamageCommand]. May be null in legacy / unit-test contexts.
+var combat: CombatService

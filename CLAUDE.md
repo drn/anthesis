@@ -77,18 +77,21 @@ See `docs/ARCHITECTURE.md` for the full design.
 ## Directory Layout
 
 ```
-scenes/              Godot scene files (.tscn) — incl. scenes/ui/ (hud, inventory_panel)
+scenes/              Godot scene files (.tscn) — incl. scenes/ui/, scenes/creatures/
 scripts/core/        Engine-level systems (world, voxels, commands, items)
 scripts/core/items/  Item/recipe data contracts (ItemDef, ItemAmount, Recipe)
 scripts/core/magic/  Ability data contract (AbilityDef)
+scripts/core/combat/ Creature data contract (CreatureDef)
 scripts/core/sim/    Tick substrate (SimulationClock)
 scripts/systems/     Gameplay systems (items, inventory, crafting, flora, biomes)
-scripts/systems/magic/  Lumen magic (LumenWell, MagicSystem, AbilityRegistry)
+scripts/systems/magic/   Lumen magic (LumenWell, MagicSystem, AbilityRegistry)
+scripts/systems/combat/  Combat (Health, CombatService, CreatureRegistry, Umbral, SpawnSystem)
 scripts/ui/          UI scripts (hud, inventory_panel)
 resources/items/     Item .tres definitions (soil, crystal_shard, …)
 resources/recipes/   Crafting recipe .tres files (bloom_brick, lumen_torch)
 resources/abilities/ Ability .tres files (shape_burst, lumen_bloom, skyward)
-resources/           Data resources (.tres) — items, recipes, abilities, flora, biomes
+resources/creatures/ Creature .tres files (voidmoth, shardling)
+resources/           Data resources (.tres) — items, recipes, abilities, creatures, flora
 shaders/             GLSL / Godot shaders
 assets/              Art, audio, fonts (binary, gitignored if large)
 tests/unit/          GUT unit tests
