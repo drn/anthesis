@@ -20,6 +20,9 @@ const EXPECTED_ITEM_IDS := [
 	&"pewter_flakes",
 	&"tin_flakes",
 	&"ferric_coin",
+	&"dun_gem",
+	&"charged_gem",
+	&"storm_catcher",
 ]
 const EXPECTED_RECIPE_IDS := [
 	&"bloom_brick",
@@ -29,6 +32,8 @@ const EXPECTED_RECIPE_IDS := [
 	&"pewter_flakes",
 	&"tin_flakes",
 	&"ferric_coin",
+	&"dun_gem",
+	&"storm_catcher",
 ]
 
 # ---------------------------------------------------------------------------

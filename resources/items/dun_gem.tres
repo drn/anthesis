@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="ItemDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/core/items/item_def.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"dun_gem"
+display_name = "Dun Gem"
+max_stack = 16
+category = &"material"
+swatch_color = Color(0.45, 0.42, 0.48, 1)
+description = "A clouded slate-grey geode, mined from deep veins and shot through with inert crystal lattice. It drinks in electromagnetic potential the way parched earth drinks rain — given sky and storm, it will hold the charge rather than release it."

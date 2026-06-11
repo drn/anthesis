@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="AbilityDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/core/magic/ability_def.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"sky_lash"
+display_name = "Skylash"
+kind = &"sky_lash"
+resource_kind = &"tempest"
+lumen_cost = 20.0
+cooldown_ticks = 10
+magnitude = 6.0
+swatch_color = Color(0.72, 0.55, 1.0, 1)
+description = "The storm's gift turns treachery into direction. Tempestlight floods your limbs, your personal gravity snaps to face the nearest cardinal axis, and for a blazing window you fall sideways — walking up walls, plunging through open air, the world rewritten around a single charged breath."

@@ -1,0 +1,31 @@
+[gd_resource type="Resource" script_class="Recipe" load_steps=8 format=3]
+
+[ext_resource type="Script" path="res://scripts/core/items/recipe.gd" id="1"]
+[ext_resource type="Script" path="res://scripts/core/items/item_amount.gd" id="2"]
+
+[sub_resource type="Resource" id="input_1"]
+script = ExtResource("2")
+item_id = &"crystal_shard"
+count = 2
+
+[sub_resource type="Resource" id="input_2"]
+script = ExtResource("2")
+item_id = &"keenglass_shard"
+count = 1
+
+[sub_resource type="Resource" id="input_3"]
+script = ExtResource("2")
+item_id = &"soil"
+count = 2
+
+[sub_resource type="Resource" id="output_1"]
+script = ExtResource("2")
+item_id = &"storm_catcher"
+count = 1
+
+[resource]
+script = ExtResource("1")
+id = &"storm_catcher"
+display_name = "Storm Catcher"
+inputs = Array[ExtResource("2")]([SubResource("input_1"), SubResource("input_2"), SubResource("input_3")])
+output = SubResource("output_1")

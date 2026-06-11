@@ -154,6 +154,21 @@ The RNG is derived from `WorldSeed.derive("spawning")` so spawn patterns are wor
 - `test_spawn_system.gd`: interval gating, population cap, single-spawn-per-round guarantee, darkness rule (XZ-only), ring bounds across 200 seeds, NAN height rejection, determinism.
 - Pattern to copy for a new creature resource: `test_creature_resources.gd` — assert `id != ""`, `max_health > 0`, `drops.size() >= 0`.
 
+## Rooted Status (Phase 9)
+
+`Umbral.set_rooted(rooted: bool)` was added in Phase 9 to support the Bondlash
+ability. While rooted:
+- Horizontal velocity is zeroed each tick and movement pathing is suppressed.
+- The Umbral keeps attacking if the player is within `attack_range` — it is
+  movement-suppressed, not pacified.
+- The rooted state is managed via `StatusEffectSystem` (`effect_id = &"rooted"`,
+  `duration_ticks = int(magnitude * 10)`). `on_apply` calls `set_rooted(true)`;
+  `on_expire` calls `set_rooted(false)`, both guarded with `is_instance_valid`.
+
+`DamageCommand` + `CombatService` are unmodified — Bondlash does not deal damage.
+To test rooted behavior, instantiate a real `Umbral` (or a stub that records
+`set_rooted` calls) and drive `StatusEffectSystem.on_tick`.
+
 ## Gotchas
 
 - Distance in UmbralAI is XZ-plane-only (`Vector2(to_target.x, to_target.z).length()`). A target directly overhead is in attack range regardless of vertical gap.

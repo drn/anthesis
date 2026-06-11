@@ -26,6 +26,8 @@ ever touches world state directly.
 | `scripts/core/commands/toggle_channel_command.gd` | Toggle a named metal channel (vigor / keensight) |
 | `scripts/core/commands/set_flare_command.gd` | Enable / disable flare on all active channels |
 | `scripts/core/commands/throw_coin_command.gd` | Consume one ferric coin from inventory and spawn it |
+| `scripts/core/commands/inhale_command.gd` | Consume one charged gem, fill tempest well, refund dun gem |
+| `scripts/core/commands/interact_catcher_command.gd` | Deposit dun gems into a catcher or collect its contents |
 | `scripts/core/net/command_codec.gd` | Wire serialization for replication |
 | `scripts/core/net/command_log.gd` | Ordered, bounded replication log |
 | `scripts/systems/net/command_router.gd` | Authority-aware submit seam |
@@ -34,6 +36,8 @@ ever touches world state directly.
 | `tests/unit/test_block_commands.gd` | PlaceBlock / RemoveBlock / CycleNote |
 | `tests/unit/test_toggle_channel_command.gd` | ToggleChannelCommand + SetFlareCommand routing |
 | `tests/unit/test_throw_coin_command.gd` | ThrowCoinCommand — coin consume + spawn args |
+| `tests/unit/test_inhale_command.gd` | InhaleCommand — gem exchange, null safety |
+| `tests/unit/test_interact_catcher_command.gd` | InteractCatcherCommand — deposit/collect paths, inventory exchange |
 | `tests/unit/test_command_codec.gd` | Encode/decode/range-gate tests |
 | `tests/unit/test_command_router.gd` | Router authority/routing tests |
 | `tests/unit/test_command_log.gd` | Log append/eviction/clear tests |
@@ -77,6 +81,8 @@ commands degrade gracefully when only part of the context is wired.
 | `channels` | `ChannelSystem` | ToggleChannelCommand, SetFlareCommand |
 | `metal_reserves` | `MetalReserves` | CastCommand (auto-swallow pre-gate) |
 | `coin_spawn` | `Callable(origin: Vector3, velocity: Vector3)` | ThrowCoinCommand |
+| `tempest` | `TempestLight` | InhaleCommand |
+| `weather` | `WeatherSystem` | (informational; available to any future weather-aware command) |
 
 ### CommandBus
 
@@ -229,6 +235,37 @@ is 0 (no coin in inventory). On success, calls `ctx.coin_spawn.call(origin, velo
 which instantiates `ferric_coin.tscn`, positions it, sets its `linear_velocity`, and
 connects its `struck` signal to the damage handler. Not replicable (client-local).
 
+### InhaleCommand
+
+```gdscript
+func _init() -> void
+func apply(ctx: WorldContext) -> void
+```
+
+Calls `ctx.tempest.inhale(ctx.inventory)`. Null-safe: no-op when `ctx.tempest` is
+null or inventory is null. The exchange (remove `charged_gem`, add `dun_gem`, add
+40 Tempestlight charge) is entirely inside `TempestLight.inhale` — the command is a
+thin routing wrapper. Not replicable (client-local).
+
+### InteractCatcherCommand
+
+```gdscript
+func _init(catcher: Node) -> void
+func apply(ctx: WorldContext) -> void
+```
+
+Duck-typed catcher check: if `catcher` is null, invalid, or lacks `dun_count` /
+`charged_count` / `collect` / `deposit` methods, the command is a no-op.
+
+- **Collect path** (catcher holds any gems): calls `catcher.collect()` and
+  adds the returned `dun` / `charged` counts to `ctx.inventory` as `&"dun_gem"`
+  and `&"charged_gem"`.
+- **Deposit path** (catcher is empty): transfers `min(StormCatcher.CAPACITY,
+  inventory.count_of(&"dun_gem"))` dun gems. The accepted count returned by
+  `catcher.deposit(n)` is removed from inventory.
+
+Not replicable (client-local).
+
 ---
 
 ## The Router Seam (Offline / Online)
@@ -248,7 +285,8 @@ online client + local   -> bus.execute  (inventory/magic/craft/combat stay clien
 `PlaceBlockCommand`, `RemoveBlockCommand`, `CycleNoteCommand`, `HarvestCommand`.
 
 **Client-local** (not replicable): `CastCommand`, `DamageCommand`, `CraftCommand`,
-`ToggleChannelCommand`, `SetFlareCommand`, `ThrowCoinCommand`.
+`ToggleChannelCommand`, `SetFlareCommand`, `ThrowCoinCommand`, `InhaleCommand`,
+`InteractCatcherCommand`.
 
 `CommandRouter` delegates to `CommandCodec` for encode/decode. All `@rpc` bodies
 are one-liners that delegate to plain non-RPC methods (`_commit`, `_handle_request`,

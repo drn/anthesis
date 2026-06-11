@@ -317,6 +317,59 @@ All new systems slot into the existing layer model without bending it.
   after ~155 lines of behaviour were extracted to `ferromancy_rig.gd`. All other
   lint rules keep their defaults.
 
+### Phase 9 — Tempestlight & Resonance Storms (live)
+
+Phase 9 adds a deterministic weather layer, a third magic resource (Tempestlight),
+two lash abilities, a gem-economy crafting chain, and a gravity-vector refactor.
+All new systems slot into the existing layer model; no existing layer contract is
+broken.
+
+- **Weather layer** (`WeatherSystem`, `scripts/systems/weather/`): a
+  `SimulationClock`-driven state machine — calm (6–10 min, seeded) → warning
+  (45 s) → storm (90 s, 45 pulses at 2-second intervals) → calm. Fully
+  deterministic from a `WorldSeed.derive("weather")` stream. Emits
+  `weather_changed(state)` and `storm_pulse(index)`. `StormVisuals` subscribes
+  and tweens the environment (fog density, moonlight energy, wind particles).
+  The storm adds heat to `IntensityModel` (`storm_warning: 0.25`, `storm: 0.50`)
+  so the adaptive music mirrors the weather.
+- **Tempest pool** (`TempestLight`, `scripts/systems/magic/`): a `LumenWell`-based
+  resource (capacity 100) acquired by inhaling charged gems (+40 each), leaking at
+  0.1/tick (~40 s per gem). While holding: speed ×1.2, heal 1 HP/s (costs 2
+  charge/s), glow OmniLight3D scales 0→3 energy. Wired through the multi-well
+  `MagicSystem` resolver (`&"tempest"` kind) so the two new abilities spend from
+  the tempest well just as ferro abilities spend from metal wells.
+- **Gravity vector** (`player.gd` refactor): `gravity_dir: Vector3` (default
+  `Vector3.DOWN`) replaces the hardcoded `velocity.y -= gravity * delta` with
+  `velocity += gravity_dir * gravity * delta`. `CharacterBody3D.up_direction` is
+  set to `-gravity_dir` so the floor plane tracks gravity. `set_gravity_dir(dir)`
+  normalizes and sets both. This is the physical substrate for Skylash; it also
+  makes jump correct regardless of gravity axis (zeroes the along-gravity component
+  then pushes `-gravity_dir * JUMP_VELOCITY`).
+- **Speed-modifier table** (`world.gd`): `_speed_mods: Dictionary` (id → float)
+  + private `_set_speed_mod(id, mult)`. `_player.speed_scale` is the product of
+  all table values. Phase 8's vigor (1.4) and pewter-drag (0.6) Callables in
+  `FerromancyRig` were refactored to use it; tempest (1.2) is the third entry.
+  All three modifiers compose multiplicatively — vigor + tempest = 1.4 × 1.2 =
+  1.68× speed.
+- **TempestRig** (`scripts/systems/world/tempest_rig.gd`): mirrors `FerromancyRig`
+  — an integrator-owned `Node` that extracts weather/tempest wiring from `world.gd`
+  to keep it under the 1200-line gdlintrc ceiling. Responsibilities: build
+  `WeatherSystem` + `TempestLight`, player glow, storm-pulse damage handler
+  (authority-gated sky-exposure raycast), `sky_lash` + `bond_lash` ability effects,
+  HUD tempest-meter binding, context/resolver publication.
+- **Gem economy**: two items (`dun_gem`, `charged_gem`) + one placeable
+  (`storm_catcher`, capacity 4) form the acquisition loop. The `StormCatcher` node
+  (`scripts/systems/weather/storm_catcher.gd`, `StaticBody3D`) joins group
+  `&"storm_catchers"` and exposes `charge_one()`. Each storm pulse that hits a
+  sky-exposed catcher converts one dun gem to charged. `BlockPlacementService` was
+  extended to place catchers (mirroring note-block placement).
+- **New commands**: `InhaleCommand` and `InteractCatcherCommand` (both client-local,
+  non-replicable). `WorldContext` gained `var tempest: TempestLight` and
+  `var weather: WeatherSystem`.
+- **LashMath** (`scripts/systems/magic/lash_math.gd`): pure static helper that
+  snaps a `Vector3` to the dominant-axis unit vector. Used by the `sky_lash` effect
+  to produce clean cardinal gravity.
+
 ### Phase 7 — Host-Authority Co-op (live)
 
 Phase 7 promotes the command layer — designed from Phase 1 to be replication-ready — into

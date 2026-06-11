@@ -55,6 +55,15 @@ signal flare_changed(active: bool)
 ## camera; velocity is the camera forward * FerricCoin.THROW_SPEED.
 signal throw_coin_requested(origin: Vector3, velocity: Vector3)
 
+## Emitted when the player presses R to inhale a charged gem (Phase 9). World
+## routes it through an InhaleCommand; the TempestLight handles the exchange.
+signal inhale_requested
+
+## Emitted when the player presses E (interact) on a node in group
+## "storm_catchers" (Phase 9). target is the catcher's root Node. World routes
+## it through an InteractCatcherCommand (deposit dun gems / collect charged ones).
+signal catcher_interact_requested(target: Node)
+
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
@@ -76,6 +85,12 @@ var sensitivity_scale := 1.0
 ## sets this through the StatusEffectSystem's apply/expire callables.
 var speed_scale := 1.0
 
+## Direction "down" gravity pulls the player (Phase 9 Skylash). Defaults to
+## [constant Vector3.DOWN]; Skylash snaps it to a cardinal axis for a window,
+## then restores it. Always paired with [member up_direction] = -gravity_dir so
+## [method CharacterBody3D.is_on_floor] resolves against the active gravity.
+var gravity_dir := Vector3.DOWN
+
 # ---------------------------------------------------------------------------
 # Node references (assigned in _ready)
 # ---------------------------------------------------------------------------
@@ -92,7 +107,23 @@ var _mouse_captured := false
 func _ready() -> void:
 	_camera = $Camera3D
 	_raycast = $Camera3D/RayCast3D
+	# up_direction must track gravity_dir from the first frame so is_on_floor()
+	# resolves correctly under the default downward gravity.
+	up_direction = -gravity_dir
 	_capture_mouse()
+
+
+## Set the player's personal gravity direction (Phase 9 Skylash).
+##
+## [param dir] is normalized; a zero / near-zero vector falls back to
+## [constant Vector3.DOWN] (normal gravity). [member up_direction] is kept as
+## [code]-gravity_dir[/code] so floor detection and slide stay consistent.
+func set_gravity_dir(dir: Vector3) -> void:
+	if dir.length() < 0.0001:
+		gravity_dir = Vector3.DOWN
+	else:
+		gravity_dir = dir.normalized()
+	up_direction = -gravity_dir
 
 
 # ---------------------------------------------------------------------------
@@ -150,7 +181,18 @@ func _unhandled_input(event: InputEvent) -> void:
 		if InputMap.has_action(action_throw) and event.is_action_pressed(action_throw):
 			_try_throw_coin()
 
-		for slot in [1, 2, 3, 4, 5]:
+		var action_inhale := "inhale"
+		if InputMap.has_action(action_inhale) and event.is_action_pressed(action_inhale):
+			inhale_requested.emit()
+
+		var action_place_catcher := "place_catcher"
+		if (
+			InputMap.has_action(action_place_catcher)
+			and event.is_action_pressed(action_place_catcher)
+		):
+			_try_place_block(&"storm_catcher")
+
+		for slot in [1, 2, 3, 4, 5, 6, 7]:
 			var action_cast := "cast_%d" % slot
 			if InputMap.has_action(action_cast) and event.is_action_pressed(action_cast):
 				cast_requested.emit(slot, _cast_target())
@@ -189,14 +231,17 @@ func _input(event: InputEvent) -> void:
 func _physics_process(delta: float) -> void:
 	var gravity: float = ProjectSettings.get_setting("physics/3d/default_gravity", 9.8)
 
+	# Gravity pulls along gravity_dir (Phase 9 Skylash redirects it off DOWN).
 	if not is_on_floor():
-		velocity.y -= gravity * delta
+		velocity += gravity_dir * gravity * delta
 
-	# Jump
+	# Jump: launch along -gravity_dir. Zero the along-gravity component first so a
+	# jump from a sideways-gravity wall gives a clean, full-strength push-off.
 	var action_jump := "jump"
 	if InputMap.has_action(action_jump) and Input.is_action_just_pressed(action_jump):
 		if is_on_floor():
-			velocity.y = JUMP_VELOCITY
+			velocity -= velocity.project(gravity_dir)
+			velocity += -gravity_dir * JUMP_VELOCITY
 
 	# Horizontal movement
 	var input_dir := Vector2.ZERO
@@ -281,6 +326,12 @@ func _try_interact() -> void:
 	var note_block_root := _root_in_group(collider, &"note_blocks")
 	if note_block_root != null:
 		block_interact_requested.emit(note_block_root)
+		return
+
+	# Storm catcher (Phase 9): interact deposits dun gems / collects charged ones.
+	var catcher_root := _root_in_group(collider, &"storm_catchers")
+	if catcher_root != null:
+		catcher_interact_requested.emit(catcher_root)
 		return
 
 	# Fall through to harvest logic.

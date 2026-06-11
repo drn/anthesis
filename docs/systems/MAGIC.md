@@ -21,6 +21,8 @@ free.
 | `scripts/core/commands/cast_command.gd` | Command layer entry point for casts |
 | `scripts/core/commands/harvest_command.gd` | Lumen gather happens here |
 | `resources/abilities/` | `.tres` ability data files |
+| `scripts/systems/magic/tempest_light.gd` | `TempestLight` — held Tempestlight pool + lash resource |
+| `scripts/systems/magic/lash_math.gd` | `LashMath` — pure axis-snap helper for Skylash |
 | `tests/unit/test_magic_system.gd` | Rule gate tests (cooldown, cost, effect-false) |
 | `tests/unit/test_lumen_well.gd` | Well arithmetic tests |
 | `tests/unit/test_cast_command.gd` | CastCommand + HarvestCommand lumen tests |
@@ -134,19 +136,26 @@ kind have independent cooldowns.
 | `swatch_color` | `Color` | blue |
 | `description` | `String` | flavor text |
 
-Five abilities ship (Phase 3 + Phase 8). Phase 8 abilities use `resource_kind`
-to spend from a metal reserve rather than the lumen well:
+Seven abilities ship (Phase 3 + Phase 8 + Phase 9). Phase 8 abilities use
+`resource_kind` to spend from a metal reserve; Phase 9 abilities use `&"tempest"`.
+Slot order is alphabetical by ability id:
 
-| id | kind | resource_kind | cost | cooldown | magnitude |
-|----|------|--------------|------|----------|-----------|
+| id | kind | resource_kind | cost | cooldown ticks | magnitude |
+|----|------|--------------|------|----------------|-----------|
+| `bond_lash` | `bond_lash` | `&"tempest"` | 15 | 10 | 5.0 (root s) |
 | `ferro_pull` | `ferro_pull` | `&"iron"` | 12 | 8 | 9.0 |
 | `ferro_push` | `ferro_push` | `&"steel"` | 12 | 8 | 11.0 |
 | `lumen_bloom` | `lumen_bloom` | `&"lumen"` | 15 | 20 | 6.0 (light radius) |
 | `shape_burst` | `shape_burst` | `&"lumen"` | 25 | 30 | 4.0 (carve radius) |
+| `sky_lash` | `sky_lash` | `&"tempest"` | 20 | 10 | 6.0 (lash s) |
 | `skyward` | `skyward` | `&"lumen"` | 10 | 15 | 14.0 (impulse m/s) |
 
 `kind` is the dispatch key for `WorldContext.ability_effects`. One ability can
 share a `kind` with another if both should invoke the same effect Callable.
+
+The `&"tempest"` resolver returns `TempestLight.well()` via the `MagicSystem`
+multi-well resolver. `TempestLight` is wired by `TempestRig` at boot; the well
+is registered alongside the metal wells. See `docs/systems/TEMPESTLIGHT.md`.
 
 ---
 
@@ -164,8 +173,9 @@ func ability_ids() -> Array[StringName]        # sorted alphabetically
 ```
 
 Abilities returned by `abilities()` are sorted by id (alphabetical). With the
-current five abilities the stable hotkey order is: `ferro_pull` (1), `ferro_push`
-(2), `lumen_bloom` (3), `shape_burst` (4), `skyward` (5).
+current seven abilities the stable hotkey order is: `bond_lash` (1), `ferro_pull`
+(2), `ferro_push` (3), `lumen_bloom` (4), `shape_burst` (5), `sky_lash` (6),
+`skyward` (7).
 
 ---
 

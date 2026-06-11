@@ -34,6 +34,10 @@ const ACCEL := 10.0
 ## Ferromantic mass exposed to the metal-source protocol (Contract #7).
 var metal_mass: float = 0.0
 
+## When true the Umbral holds position (zero horizontal velocity) but keeps
+## attacking if the player is in reach. Set via [method set_rooted].
+var _rooted: bool = false
+
 var _def: CreatureDef
 var _clock: SimulationClock
 var _target: Node3D
@@ -92,6 +96,15 @@ func is_metal_anchored() -> bool:
 	return false
 
 
+## Root or unroot this Umbral (Phase 9 bond_lash status effect).
+##
+## While rooted the Umbral's movement logic holds position — horizontal
+## velocity is clamped to zero each physics frame — but it continues to
+## attack the player if they remain within attack range.
+func set_rooted(rooted: bool) -> void:
+	_rooted = rooted
+
+
 ## The [CreatureDef] this Umbral was configured from.
 func definition() -> CreatureDef:
 	return _def
@@ -121,6 +134,13 @@ func _physics_process(delta: float) -> void:
 		velocity.y -= gravity * delta
 
 	if _dying:
+		velocity.x = move_toward(velocity.x, 0.0, _def_speed() * delta * ACCEL)
+		velocity.z = move_toward(velocity.z, 0.0, _def_speed() * delta * ACCEL)
+		move_and_slide()
+		return
+
+	if _rooted:
+		# Rooted: hold position (zero horizontal) but gravity + attack still apply.
 		velocity.x = move_toward(velocity.x, 0.0, _def_speed() * delta * ACCEL)
 		velocity.z = move_toward(velocity.z, 0.0, _def_speed() * delta * ACCEL)
 		move_and_slide()

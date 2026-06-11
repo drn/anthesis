@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="ItemDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/core/items/item_def.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"storm_catcher"
+display_name = "Storm Catcher"
+max_stack = 8
+category = &"placeable"
+swatch_color = Color(0.3, 0.62, 0.75, 1)
+description = "A tall crystal pylon with a four-gem rack at the crown. Plant it in open sky before the violet bruise reaches the horizon. When the Resonance Storm pulses overhead, the rack drinks dun gems dry and spits back charged ones — pure Tempestlight, bottled and waiting."
