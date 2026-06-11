@@ -22,3 +22,6 @@ tools/
 
 # Build output
 exports/
+
+# Local agent phase artifacts
+.context/
