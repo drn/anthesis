@@ -180,6 +180,47 @@ The HUD's health bar reads the player's `Health`; a hurt vignette flashes on dam
 death overlay fades in on death — all presentation-only, driven by the `changed`/`died`
 signals.
 
+### Phase 5 — Adaptive Music (live)
+
+A No Man's Sky–style **stem/intensity** soundtrack: N looping stems play phase-locked and
+each fades itself in or out as a single 0..1 game-intensity signal rises and falls. EDM,
+cosmic-progressive, 110 BPM, A minor.
+
+- **Engine decision — built-in audio, not FMOD.** FMOD is the canonical adaptive-audio
+  middleware, but its toolchain and runtime are account-/license-gated, which is
+  incompatible with this MIT, zero-baggage, reproducible-from-source repo. We instead
+  realize the same stem-mixing model on Godot's built-in `AudioStreamPlayer`s: one looping
+  player per stem, all started in the same frame so they share a phase origin, with
+  per-stem volume driven by the intensity signal. No external dependency, no licensing.
+- **Reproducible assets** (`scripts/tools/generate_stems.py`, `make stems`): the five
+  stems (`pad`, `bass`, `arp`, `drums`, `shimmer`) are **procedurally synthesized** by a
+  stdlib-only Python script (deterministic — fixed seed, no wall-clock), so the repo
+  carries no third-party audio and the WAVs regenerate byte-identically. Each is exactly
+  8 bars (32 beats @ 110 BPM ≈ 17.45 s), mono, 16-bit, 44100 Hz, normalized to −3 dBFS, so
+  the loops are seamless and stay in sync. `assets/audio/music/LICENSE.md` waives rights
+  (CC0/public domain).
+- **Intensity** (`IntensityModel`, `scripts/systems/audio/`): a pure, deterministic heat
+  accumulator (no node, signal, RNG, or wall-clock). `on_event(kind)` adds heat
+  immediately (combat_hit, player_hurt, enemy_near, dig, cast, harvest); `tick()` decays
+  the level toward 0. Identical inputs always yield an identical level, keeping the mix
+  reproducible and unit-testable.
+- **Data** (`MusicStemDef`, `scripts/core/audio/`; `.tres` in `resources/music/`): each
+  stem declares its `threshold`/`full_at` intensity window, `base_db`, and `always_on`
+  flag (the pad). Loaded by `MusicStemRegistry`, mirroring `AbilityRegistry`/
+  `CreatureRegistry`.
+- **Mixer** (`MusicSystem`, `scripts/systems/audio/`): builds one looping
+  `AudioStreamPlayer` per stem, force-loops the WAV, starts all in one frame, and on each
+  `SimulationClock` tick decays the model and slews each player's volume toward its target
+  (capped per tick to avoid zipper noise). The level→dB rule is a pure static function
+  (`volume_db_for`) so presentation never re-derives it. Headless-safe: players exist even
+  with no audio device.
+- **Integration loop** (`World`): one `IntensityModel` + `MusicStemRegistry` + `MusicSystem`
+  child. Event sources, all read-only: `CommandBus.command_executed` maps the command class
+  to a kind (`DigCommand`→dig, `CastCommand`→cast, `HarvestCommand`→harvest);
+  `CombatService.damage_applied` becomes `player_hurt` (target is the player) or
+  `combat_hit`; each `SimulationClock` tick emits `enemy_near` if any Umbral is within 12 m
+  of the player. The soundtrack thus reads gameplay without owning or mutating any of it.
+
 ---
 
 ## Systems as Autonomous Modules

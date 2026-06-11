@@ -28,6 +28,7 @@ Prebuilt binaries: https://github.com/Zylann/godot_voxel/releases/tag/v1.6
 
 ```bash
 make setup         # download Godot+voxel prebuilt
+make stems         # (re)generate the adaptive-music stem WAVs (deterministic)
 make import        # import assets (required before first test run)
 make test          # headless GUT test suite
 make lint          # gdlint all *.gd files
@@ -82,16 +83,21 @@ scripts/core/        Engine-level systems (world, voxels, commands, items)
 scripts/core/items/  Item/recipe data contracts (ItemDef, ItemAmount, Recipe)
 scripts/core/magic/  Ability data contract (AbilityDef)
 scripts/core/combat/ Creature data contract (CreatureDef)
+scripts/core/audio/  Music stem data contract (MusicStemDef)
 scripts/core/sim/    Tick substrate (SimulationClock)
 scripts/systems/     Gameplay systems (items, inventory, crafting, flora, biomes)
 scripts/systems/magic/   Lumen magic (LumenWell, MagicSystem, AbilityRegistry)
 scripts/systems/combat/  Combat (Health, CombatService, CreatureRegistry, Umbral, SpawnSystem)
+scripts/systems/audio/   Adaptive music (IntensityModel, MusicStemRegistry, MusicSystem)
+scripts/tools/       Dev/build scripts (generate_stems.py — procedural music synth)
 scripts/ui/          UI scripts (hud, inventory_panel)
 resources/items/     Item .tres definitions (soil, crystal_shard, …)
 resources/recipes/   Crafting recipe .tres files (bloom_brick, lumen_torch)
 resources/abilities/ Ability .tres files (shape_burst, lumen_bloom, skyward)
 resources/creatures/ Creature .tres files (voidmoth, shardling)
+resources/music/     Music stem .tres files (pad, bass, arp, drums, shimmer)
 resources/           Data resources (.tres) — items, recipes, abilities, creatures, flora
+assets/audio/music/  Procedurally generated stem WAVs (regenerate via `make stems`)
 shaders/             GLSL / Godot shaders
 assets/              Art, audio, fonts (binary, gitignored if large)
 tests/unit/          GUT unit tests

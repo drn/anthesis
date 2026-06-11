@@ -1,6 +1,6 @@
 GODOT ?= tools/godot/macos_editor.app/Contents/MacOS/Godot
 
-.PHONY: setup edit run import test lint format format-check
+.PHONY: setup edit run import test lint format format-check stems
 
 # Check that the Godot binary exists before targets that need it.
 _check_godot:
@@ -47,3 +47,7 @@ format:
 ## Check formatting without modifying files (CI-safe).
 format-check:
 	find scripts tests -name "*.gd" | xargs gdformat --check
+
+## Regenerate the procedural adaptive-music stems (stdlib Python, idempotent).
+stems:
+	python3 scripts/tools/generate_stems.py
