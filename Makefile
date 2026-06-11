@@ -28,13 +28,21 @@ _check_godot:
 setup:
 	bash scripts/setup.sh
 
-# First-run guard: the class_name registry lives in gitignored
+# Import guard: the class_name registry lives in gitignored
 # .godot/global_script_class_cache.cfg. Booting without it produces a wall of
-# "Identifier not declared" parse errors, so import once when it is missing.
+# "Identifier not declared" parse errors — and a git pull that brings in new
+# scripts leaves it STALE, which produces the same wall. Import when the cache
+# is missing or older than any script/resource/scene, then touch the cache so
+# an import that rewrites nothing still clears the staleness check.
 _ensure_import: _check_godot
 	@if [ ! -f .godot/global_script_class_cache.cfg ]; then \
 		echo "No import cache found (fresh checkout) — running first import..."; \
 		$(GODOT_RUN) --headless --path . --import; \
+	elif [ -n "$$(find scripts resources scenes -name '*.gd' -newer .godot/global_script_class_cache.cfg -print -quit 2>/dev/null)" ] \
+	  || [ -n "$$(find resources scenes -type f \( -name '*.tres' -o -name '*.tscn' \) -newer .godot/global_script_class_cache.cfg -print -quit 2>/dev/null)" ]; then \
+		echo "Scripts/assets newer than import cache (post-pull) — reimporting..."; \
+		$(GODOT_RUN) --headless --path . --import; \
+		touch .godot/global_script_class_cache.cfg; \
 	fi
 
 ## Open the Godot editor (background).

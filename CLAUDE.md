@@ -224,8 +224,10 @@ Traps seen building phases 1-8. Check these before debugging from scratch:
 - **`--import` first.** A fresh worktree has no `.godot/imported/` cache. Run
   `make import` (or `<binary> --headless --path . --import`) before the first
   test run or after adding any `.tres` / asset, or you get missing-import errors.
-  Also re-run it after a rebase/pull that brings in new scripts — a stale
-  `class_name` cache produces walls of `Identifier "X" not declared` parse errors.
+  A rebase/pull that brings in new scripts leaves the `class_name` cache STALE —
+  the same wall of `Identifier "X" not declared` parse errors. `make run` /
+  `make edit` self-heal both cases (missing or stale cache) and `make test`
+  always imports; only direct binary invocations still need a manual import.
 - **Push with an explicit refspec.** A bare `git push` (or
   `git push --force-with-lease`) under `push.default=matching` pushes *every*
   matching local branch — a stale local `master` will force-rewind
