@@ -1,0 +1,51 @@
+[gd_resource type="Environment" load_steps=4 format=3 uid="uid://anthesis_world_env"]
+
+[ext_resource type="Shader" path="res://shaders/cosmic_sky.gdshader" id="1_sky"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_sky"]
+shader = ExtResource("1_sky")
+shader_parameter/star_density = 0.7
+shader_parameter/nebula_intensity = 2.3
+shader_parameter/nebula_color_a = Color(0.1, 0.85, 0.9, 1)
+shader_parameter/nebula_color_b = Color(0.85, 0.2, 0.8, 1)
+shader_parameter/planet_color = Color(0.45, 0.3, 0.65, 1)
+shader_parameter/band_direction = Vector2(0.8, 0.6)
+shader_parameter/zenith_color = Color(0.02, 0.018, 0.07, 1)
+shader_parameter/horizon_color = Color(0.12, 0.07, 0.22, 1)
+shader_parameter/twinkle_speed = 1.2
+shader_parameter/planet_glow_color = Color(0.55, 0.45, 0.95, 1)
+
+[sub_resource type="Sky" id="Sky_cosmic"]
+sky_material = SubResource("ShaderMaterial_sky")
+
+[resource]
+background_mode = 2
+sky = SubResource("Sky_cosmic")
+ambient_light_source = 3
+ambient_light_color = Color(0.5, 0.6, 0.8, 1)
+ambient_light_energy = 0.85
+tonemap_mode = 3
+tonemap_white = 6.0
+glow_enabled = true
+glow_levels/1 = 0.4
+glow_levels/2 = 1.0
+glow_levels/3 = 1.0
+glow_levels/4 = 0.6
+glow_levels/5 = 0.3
+glow_intensity = 0.85
+glow_strength = 1.0
+glow_bloom = 0.25
+glow_blend_mode = 1
+glow_hdr_threshold = 1.0
+glow_hdr_scale = 2.0
+fog_enabled = false
+volumetric_fog_enabled = true
+volumetric_fog_density = 0.015
+volumetric_fog_albedo = Color(0.3, 0.25, 0.55, 1)
+volumetric_fog_emission = Color(0.08, 0.06, 0.18, 1)
+volumetric_fog_emission_energy = 0.7
+volumetric_fog_length = 96.0
+volumetric_fog_detail_spread = 2.0
+adjustment_enabled = true
+adjustment_contrast = 1.08
+adjustment_saturation = 1.15
