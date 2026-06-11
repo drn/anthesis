@@ -1,0 +1,97 @@
+[gd_scene load_steps=14 format=3]
+
+[ext_resource type="Script" path="res://scripts/systems/weather/storm_catcher.gd" id="StormCatcher_script"]
+
+[sub_resource type="StandardMaterial3D" id="Mat_pylon"]
+albedo_color = Color(0.3, 0.55, 0.72, 1)
+emission_enabled = true
+emission = Color(0.2, 0.45, 0.65, 1)
+emission_energy_multiplier = 0.6
+roughness = 0.15
+metallic = 0.25
+
+[sub_resource type="StandardMaterial3D" id="Mat_gem_dun"]
+albedo_color = Color(0.45, 0.42, 0.48, 1)
+roughness = 0.6
+metallic = 0.05
+
+[sub_resource type="StandardMaterial3D" id="Mat_gem_charged"]
+albedo_color = Color(0.88, 0.84, 1.0, 1)
+emission_enabled = true
+emission = Color(0.75, 0.65, 1.0, 1)
+emission_energy_multiplier = 2.5
+roughness = 0.05
+
+[sub_resource type="PrismMesh" id="PrismMesh_shaft"]
+size = Vector3(0.14, 1.4, 0.14)
+
+[sub_resource type="PrismMesh" id="PrismMesh_tip"]
+size = Vector3(0.2, 0.35, 0.2)
+
+[sub_resource type="PrismMesh" id="PrismMesh_gem"]
+size = Vector3(0.12, 0.18, 0.12)
+
+[sub_resource type="BoxMesh" id="BoxMesh_rack"]
+size = Vector3(0.64, 0.06, 0.12)
+
+[sub_resource type="StandardMaterial3D" id="Mat_rack"]
+albedo_color = Color(0.22, 0.38, 0.48, 1)
+roughness = 0.4
+metallic = 0.4
+
+[sub_resource type="CylinderShape3D" id="CylinderShape3D_col"]
+radius = 0.22
+height = 1.8
+
+[node name="StormCatcher" type="StaticBody3D"]
+script = ExtResource("StormCatcher_script")
+
+[node name="Shaft" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.7, 0)
+mesh = SubResource("PrismMesh_shaft")
+surface_material_override/0 = SubResource("Mat_pylon")
+
+[node name="Tip" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.575, 0)
+mesh = SubResource("PrismMesh_tip")
+surface_material_override/0 = SubResource("Mat_pylon")
+
+[node name="Rack" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.1, 0)
+mesh = SubResource("BoxMesh_rack")
+surface_material_override/0 = SubResource("Mat_rack")
+
+[node name="Gem0" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.24, 1.22, 0)
+mesh = SubResource("PrismMesh_gem")
+surface_material_override/0 = SubResource("Mat_gem_dun")
+visible = false
+
+[node name="Gem1" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.08, 1.22, 0)
+mesh = SubResource("PrismMesh_gem")
+surface_material_override/0 = SubResource("Mat_gem_dun")
+visible = false
+
+[node name="Gem2" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.08, 1.22, 0)
+mesh = SubResource("PrismMesh_gem")
+surface_material_override/0 = SubResource("Mat_gem_dun")
+visible = false
+
+[node name="Gem3" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.24, 1.22, 0)
+mesh = SubResource("PrismMesh_gem")
+surface_material_override/0 = SubResource("Mat_gem_dun")
+visible = false
+
+[node name="GlowLight" type="OmniLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.2, 0)
+light_color = Color(0.75, 0.65, 1.0, 1)
+light_energy = 0.0
+omni_range = 5.0
+shadow_enabled = false
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)
+shape = SubResource("CylinderShape3D_col")

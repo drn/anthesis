@@ -139,6 +139,15 @@ var _metal_overlay: MetalLineOverlay
 ## combat service exists.
 var _ferro_rig: FerromancyRig
 
+## Speed-modifier table (Phase 9): id → multiplier. [member Player.speed_scale]
+## is the product of all entries, so Vigor (1.4), the pewter-drag crash (0.6) and
+## the tempest boon (1.2) compose cleanly via [method _set_speed_mod].
+var _speed_mods: Dictionary = {}
+## Phase 9 weather/tempest wiring, extracted from this hub (mirrors [FerromancyRig]).
+var _tempest_rig: TempestRig
+## The Environment_Rig node, kept so [TempestRig]'s [StormVisuals] can tween it.
+var _env_rig: Node3D
+
 var _combat: CombatService
 var _creatures: CreatureRegistry
 var _spawner: SpawnSystem
@@ -191,6 +200,8 @@ func _ready() -> void:
 	_build_music()
 	_build_sequencer()
 	_build_net()
+	# Phase 9 weather/tempest: built last because it needs the router/intensity/HUD.
+	_build_tempest()
 	_build_pause_menu()
 	# Park the player up high until terrain streams in, then drop them onto it.
 	_player.global_position = Vector3(0.0, PLAYER_SAFE_ALTITUDE, 0.0)
@@ -327,6 +338,8 @@ func _build_terrain() -> void:
 func _build_environment() -> void:
 	var env := _ENVIRONMENT_SCENE.instantiate()
 	add_child(env)
+	# Keep the rig root so the Phase 9 StormVisuals can tween its fog / moonlight.
+	_env_rig = env as Node3D
 
 
 func _build_items() -> void:
@@ -369,6 +382,8 @@ func _build_magic() -> void:
 	var well_resolver := func(kind: StringName) -> LumenWell:
 		if kind == &"lumen":
 			return _well
+		if kind == &"tempest":
+			return _tempest_rig.tempest().well() if _tempest_rig != null else null
 		return _metal_reserves.well(kind)
 	_magic = MagicSystem.new(well_resolver, func() -> int: return _clock.current_tick())
 
@@ -453,6 +468,9 @@ func _build_player() -> void:
 	_player.channel_toggle_requested.connect(_on_channel_toggle_requested)
 	_player.flare_changed.connect(_on_flare_changed)
 	_player.throw_coin_requested.connect(_on_throw_coin_requested)
+	# Tempest intents (Phase 9): inhale a charged gem, interact with a catcher.
+	_player.inhale_requested.connect(_on_inhale_requested)
+	_player.catcher_interact_requested.connect(_on_catcher_interact_requested)
 
 
 ## Wire the player into the combat layer and drive Umbral spawning off the clock.
@@ -976,6 +994,41 @@ func _on_throw_coin_requested(origin: Vector3, velocity: Vector3) -> void:
 	_router.submit(ThrowCoinCommand.new(origin, velocity))
 
 
+# ---------------------------------------------------------------------------
+# Tempest / weather (Phase 9 — Resonance Storms & held light)
+# ---------------------------------------------------------------------------
+
+
+## Stand up the Phase 9 weather/tempest subsystems via the TempestRig (which
+## publishes onto the context, registers the lashes, and binds the HUD meter).
+func _build_tempest() -> void:
+	_tempest_rig = TempestRig.new()
+	# The rig pulls the player/router/session/intensity/health/HUD via World's
+	# getters; the non-public collaborators are passed explicitly.
+	_tempest_rig.build(self, _clock, _world_seed, _status, _env_rig, _context, _set_speed_mod)
+
+
+## Set table entry [param id] to [param multiplier] and recompute the player's
+## [member Player.speed_scale] as the product of all entries (1.0 = effective clear).
+func _set_speed_mod(id: StringName, multiplier: float) -> void:
+	_speed_mods[id] = multiplier
+	var product := 1.0
+	for value in _speed_mods.values():
+		product *= value
+	if _player != null:
+		_player.speed_scale = product
+
+
+## Route an inhale intent (R) through the command layer.
+func _on_inhale_requested() -> void:
+	_router.submit(InhaleCommand.new())
+
+
+## Route a storm-catcher interaction (E) through the command layer.
+func _on_catcher_interact_requested(target: Node) -> void:
+	_router.submit(InteractCatcherCommand.new(target))
+
+
 ## Drive deterministic Umbral spawning and far-despawn each simulation tick.
 ##
 ## HOST-ONLY in a session: Umbrals are local-host-side in v0 and are not synced,
@@ -1100,8 +1153,9 @@ func _respawn_player() -> void:
 ## Skyward can read the player's velocity.
 func _install_ability_effects() -> void:
 	# Bind the rig now that the player and combat service exist; its ferro effects
-	# read both at cast time.
-	_ferro_rig.setup(self, _status, _combat)
+	# read both at cast time. The speed-mod table seam threads the channel boons
+	# through World's product table (Phase 9) instead of writing speed_scale direct.
+	_ferro_rig.setup(self, _status, _combat, _set_speed_mod)
 	_context.ability_effects = {
 		&"shape_burst": _effect_shape_burst,
 		&"lumen_bloom": _effect_lumen_bloom,

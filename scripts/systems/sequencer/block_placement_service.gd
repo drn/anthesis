@@ -40,6 +40,7 @@ const GROUP_NOTE := &"note_blocks"
 const _SCENE_PATHS := {
 	&"sequencer_core": "res://scenes/blocks/sequencer_core.tscn",
 	&"note_block": "res://scenes/blocks/note_block.tscn",
+	&"storm_catcher": "res://scenes/props/storm_catcher.tscn",
 }
 
 ## item_id (StringName) -> [PackedScene]. Populated lazily from [constant
@@ -100,6 +101,7 @@ func place(item_id: StringName, position: Vector3) -> bool:
 		_bind_note_to_core(block)
 	elif item_id == &"sequencer_core":
 		_adopt_dormant_notes(block)
+	# storm_catcher has no sequencer binding — it self-registers via _ready()
 	block_placed.emit(item_id, snapped)
 	return true
 
@@ -181,6 +183,8 @@ func _item_id_for(block: Node) -> StringName:
 		return &"note_block"
 	if block.is_in_group(GROUP_CORE):
 		return &"sequencer_core"
+	if block.is_in_group(&"storm_catchers"):
+		return &"storm_catcher"
 	return &""
 
 

@@ -13,7 +13,8 @@ extends GutTest
 const ITEMS_DIR := "res://resources/items"
 const RECIPES_DIR := "res://resources/recipes"
 
-## Expected item ids — Phase 2 items, Phase 6 sequencer blocks, Phase 8 metal items.
+## Expected item ids — Phase 2 items, Phase 6 sequencer blocks, Phase 8 metal
+## items, Phase 9 tempest items.
 ## (All ids included so recipe ingredient/output validation recognizes them.)
 const EXPECTED_ITEM_IDS: Array = [
 	&"soil",
@@ -33,6 +34,9 @@ const EXPECTED_ITEM_IDS: Array = [
 	&"pewter_flakes",
 	&"tin_flakes",
 	&"ferric_coin",
+	&"dun_gem",
+	&"charged_gem",
+	&"storm_catcher",
 ]
 
 ## Expected recipe ids.
@@ -46,6 +50,8 @@ const EXPECTED_RECIPE_IDS: Array = [
 	&"pewter_flakes",
 	&"tin_flakes",
 	&"ferric_coin",
+	&"dun_gem",
+	&"storm_catcher",
 ]
 
 

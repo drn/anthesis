@@ -115,6 +115,8 @@ Mutations route through the command bus. Quick map of "I want to add X":
 | Metal ability | Same as Ability + set `resource_kind = &"<metal>"` on the `.tres`; add the kind → flake-id pair to `FLAKE_MAP` in `world.gd` if it's a new metal | `MagicSystem` multi-well resolver | `docs/systems/METALLURGY.md` |
 | Sustained channel | `channels.install(id, def)` in `FerromancyRig.install_channels` (def: `{resource_kind, drain_per_tick, on_start, on_stop}`) + input action in `project.godot` + player signal + route in `world.gd` | `ChannelSystem` + `StatusEffectSystem` | `docs/systems/METALLURGY.md` |
 | Metal source | Add `var metal_mass: float` + `func is_metal_anchored() -> bool` + `add_to_group(&"metal_sources")` in `_ready` to any Node3D | `FerroKinetics.select_source` (scene tree group query) | `docs/systems/METALLURGY.md` |
+| Weather-driven effect | Connect to `WeatherSystem.weather_changed` or `storm_pulse` in `TempestRig` (or a new rig); gate world mutations on `_session.has_authority()`; always route through commands | `TempestRig`, `WeatherSystem` | `docs/systems/WEATHER.md` |
+| Gem-economy item pair | Create a "raw" item `.tres` + a "processed" item `.tres`; the raw form is crafted from terrain drops; the processed form is produced by an in-world object during a world event (mirror `dun_gem` → `charged_gem` via `StormCatcher.charge_one()`); the exchange command follows `InhaleCommand`'s pattern | `ItemRegistry` (auto-scans), `InteractCatcherCommand` | `docs/systems/WEATHER.md`, `docs/systems/TEMPESTLIGHT.md` |
 | Creature | `resources/creatures/<id>.tres` (`CreatureDef`) | `CreatureRegistry` + `SpawnSystem` | `docs/systems/COMBAT.md` |
 | Music stem | `resources/music/<id>.tres` (`MusicStemDef`) + WAV via `make stems` | `MusicStemRegistry` + `MusicSystem` | `docs/systems/MUSIC.md` |
 | Command | `scripts/core/commands/<name>_command.gd` (`extends WorldCommand`) + a `WorldContext` field if it needs a new service + `CommandCodec` case if replicable | `CommandBus` / `CommandRouter` | `docs/COMMANDS.md` |
@@ -174,7 +176,8 @@ scripts/systems/     Gameplay systems (items, inventory, crafting, flora, biomes
 scripts/systems/magic/   Lumen + metal magic (LumenWell, MagicSystem, AbilityRegistry, MetalReserves, ChannelSystem, FerroKinetics, FerricCoin)
 scripts/systems/combat/  Combat (Health, CombatService, CreatureRegistry, Umbral, SpawnSystem)
 scripts/systems/status/  Status effects (StatusEffectSystem — vigor, keensight, pewter drag)
-scripts/systems/world/   World-level integrator extractions (FerromancyRig)
+scripts/systems/world/   World-level integrator extractions (FerromancyRig, TempestRig)
+scripts/systems/weather/ Weather system and storm catcher (WeatherSystem, StormCatcher)
 scripts/systems/audio/   Adaptive music (IntensityModel, MusicStemRegistry, MusicSystem)
 scripts/systems/sequencer/ In-world sequencer (StepTimeline, SectorMath, SequencerCore, NoteBlock, BlockPlacementService)
 scripts/systems/net/ Co-op runtime (NetworkSession, CommandRouter, PlayerSync, RemotePlayer)
@@ -256,6 +259,25 @@ Traps seen building phases 1-8. Check these before debugging from scratch:
   `connected_to_server` — never RPC the host the instant after `join()`.
 - **Parallel file collisions.** `project.godot` and `world.gd` are integrator-only
   (see `new-phase`). Builders never edit them, or parallel work collides on merge.
+- **`up_direction` must be set in `_ready` for default-DOWN gravity.** The Phase 9
+  gravity refactor in `player.gd` delegates floor-plane tracking to
+  `up_direction = -gravity_dir`. But `CharacterBody3D`'s default `up_direction` is
+  `Vector3.UP` only if explicitly set; an uninitialized value leaves the player
+  floating. Always assign `up_direction = Vector3.UP` in `_ready` (or call
+  `set_gravity_dir(Vector3.DOWN)` which sets it) before physics runs.
+- **`StatusEffectSystem` re-apply does NOT re-fire `on_apply`.** Calling `apply`
+  for an effect that is already active refreshes the duration counter but skips
+  `on_apply`. For the `sky_lash` effect this means you must call
+  `player.set_gravity_dir(new_axis)` *before* the re-apply, not inside `on_apply`,
+  or the axis won't update on re-cast.
+- **Storm pulse `queue_free` deferral.** `StormCatcher.remove()` (via
+  `BlockPlacementService.remove()`) calls `queue_free()` on the node, which is
+  deferred. Tests that assert block count immediately after `remove()` must
+  `await get_tree().process_frame` before checking.
+- **Weather spy spills over setup reconcile.** In `TempestLight` tests that spy on
+  the `speed_modifier` Callable, the setup-reconcile tick emits a rising-edge
+  call (`[true]`) even before the test scenario starts. Call `spy.calls.clear()`
+  after the seed/reconcile step so assertions only capture the intended edge.
 - **`gdlintrc` raises `max-file-lines: 1200`.** Added in Phase 8 to accommodate
   `world.gd` (1145 lines after `FerromancyRig` extraction). Only the line-count
   heuristic is relaxed — all correctness rules keep their defaults. Do not raise

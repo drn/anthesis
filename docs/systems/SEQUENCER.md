@@ -122,6 +122,8 @@ GROUP: `&"note_blocks"`.
 ## BlockPlacementService
 
 `BlockPlacementService` (`RefCounted`) is the inventory-gated spawn/remove seam.
+As of Phase 9 it also handles `&"storm_catcher"` placement — it is no longer
+sequencer-only.
 
 **Construction:**
 ```gdscript
@@ -136,13 +138,21 @@ BlockPlacementService.new(inventory, container_provider, core_lookup)
 3. Instantiates the scene, snaps to the `GRID` (0.5 m) grid with `snappedf`.
 4. Names the node `"Block_%d" % _spawn_counter` and increments `_spawn_counter`.
 5. Adds to the container.
-6. For `&"note_block"`: binds to nearest core via `_bind_note_to_core`. For `&"sequencer_core"`: adopts all dormant Note Blocks within RADIUS via `_adopt_dormant_notes`.
+6. For `&"note_block"`: binds to nearest core via `_bind_note_to_core`. For
+   `&"sequencer_core"`: adopts all dormant Note Blocks within RADIUS via
+   `_adopt_dormant_notes`. For `&"storm_catcher"`: no sequencer binding — placed
+   as-is, joining `&"storm_catchers"` group in its own `_ready`.
 7. Emits `block_placed`.
 
 **Deterministic names:** `Block_0`, `Block_1`, ... The counter increments monotonically per successful place. Late-join replay reproduces identical names because placements replay in the same order they were committed. Use `spawn_count()` to confirm two peers are in sync.
 
 **`remove(block) -> StringName`:**
-Identifies the item from the block's group, unregisters it from cores (for Note Blocks) or releases its blocks to dormant (for Sequencer Core), frees it, returns the item id for the caller to refund. `RemoveBlockCommand` handles the refund side.
+Identifies the item from the block's group, unregisters it from cores (for Note
+Blocks) or releases its blocks to dormant (for Sequencer Core), frees it via
+`queue_free()`, returns the item id for the caller to refund. For `&"storm_catcher"`
+the refund is simply the item id — no sequencer cleanup needed. Note: `queue_free`
+is deferred; tests must `await get_tree().process_frame` before asserting block
+count. `RemoveBlockCommand` handles the inventory refund side.
 
 ## The Three Block Commands
 

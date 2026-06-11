@@ -27,15 +27,31 @@ const FERRO_PULL_LIFT := 2.0
 var _world: Node3D
 var _status: StatusEffectSystem
 var _combat: CombatService
+## World's speed-modifier table seam: Callable(id: StringName, multiplier: float).
+## The rig drives its Vigor / pewter-drag entries through this rather than writing
+## [member Player.speed_scale] directly, so World owns the product of all mods
+## (Phase 9 added the &"tempest" entry). A multiplier of 1.0 clears an entry.
+var _speed_modifier: Callable = Callable()
 
 
 ## Bind the World-owned collaborators the rig drives. [param world] supplies the
 ## scene tree (group queries, environment lookup) and the live player via
-## [method player].
-func setup(world: Node3D, status: StatusEffectSystem, combat: CombatService) -> void:
+## [method player]. [param speed_modifier] is World's speed-mod table seam —
+## Callable(id: StringName, multiplier: float) — which the channel boons drive.
+func setup(
+	world: Node3D, status: StatusEffectSystem, combat: CombatService, speed_modifier := Callable()
+) -> void:
 	_world = world
 	_status = status
 	_combat = combat
+	_speed_modifier = speed_modifier
+
+
+## Drive World's speed-mod table for [param id] to [param multiplier] (1.0 clears).
+## Tolerates an unwired seam (legacy callers that pass no speed_modifier).
+func _set_speed(id: StringName, multiplier: float) -> void:
+	if _speed_modifier.is_valid():
+		_speed_modifier.call(id, multiplier)
 
 
 ## Install the Vigor and Keensight channel definitions into [param channels].
@@ -94,8 +110,8 @@ func _vigor_on_start() -> void:
 		p.get_instance_id(),
 		&"vigor",
 		0,
-		func() -> void: p.speed_scale = VIGOR_SPEED_SCALE,
-		func() -> void: p.speed_scale = 1.0,
+		func() -> void: _set_speed(&"vigor", VIGOR_SPEED_SCALE),
+		func() -> void: _set_speed(&"vigor", 1.0),
 	)
 
 
@@ -111,8 +127,8 @@ func _vigor_on_stop(reason: StringName) -> void:
 			p.get_instance_id(),
 			&"pewter_drag",
 			PEWTER_DRAG_TICKS,
-			func() -> void: p.speed_scale = PEWTER_DRAG_SPEED_SCALE,
-			func() -> void: p.speed_scale = 1.0,
+			func() -> void: _set_speed(&"pewter_drag", PEWTER_DRAG_SPEED_SCALE),
+			func() -> void: _set_speed(&"pewter_drag", 1.0),
 		)
 
 

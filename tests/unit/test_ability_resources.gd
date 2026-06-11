@@ -11,12 +11,14 @@ extends GutTest
 
 const ABILITIES_DIR := "res://resources/abilities"
 
-## Phase 3+8 pinned ability ids.
+## Phase 3+8+9 pinned ability ids.
 const EXPECTED_ABILITY_IDS: Array = [
+	&"bond_lash",
 	&"ferro_pull",
 	&"ferro_push",
 	&"lumen_bloom",
 	&"shape_burst",
+	&"sky_lash",
 	&"skyward",
 ]
 

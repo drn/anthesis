@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="AbilityDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/core/magic/ability_def.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"bond_lash"
+display_name = "Bondlash"
+kind = &"bond_lash"
+resource_kind = &"tempest"
+lumen_cost = 15.0
+cooldown_ticks = 10
+magnitude = 5.0
+swatch_color = Color(0.95, 0.78, 0.35, 1)
+description = "Tempestlight reaches out like a tether of solid lightning, binding a creature's shadow-limbs to the earth. It holds position, rage still burning in its eyes, attacks still landing if you stray too close — Bondlash pins, it does not forgive."

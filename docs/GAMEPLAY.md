@@ -13,19 +13,24 @@ dives in [docs/systems/](systems/).
 ```
 dig terrain ──► soil + crystal shards ──┐
 harvest flora ──► lumen + spores/petals ─┼──► craft ──► torches, bricks,
-fight Umbrals ──► shards + spores        ┘             sequencer parts, coins
-mine metal deposits ──► ores ─────────────────► refine ──► metal flakes
-                                                          │
-        lumen powers instant magic ◄── flora glow keeps the dark away
-        metal flakes power channels + Ferromancy          │
-                                                          ▼
-                              place a Sequencer Core + Note Blocks
-                              and compose music inside the world
+fight Umbrals ──► shards + spores        ┘             sequencer parts, coins,
+mine metal deposits ──► ores ─────────────────► refine ──► metal flakes     dun gems
+                                                          │                       │
+        lumen powers instant magic ◄── flora glow keeps the dark away             │
+        metal flakes power channels + Ferromancy          │              rack on storm catcher
+                                                          ▼                       ▼
+                              place a Sequencer Core + Note Blocks         survive the storm
+                              and compose music inside the world                   │
+                                                                          charged gem ──► inhale (R)
+                                                                                         ▼
+                                                                          Tempestlight: heals, speed,
+                                                                          Skylash + Bondlash abilities
 ```
 
-Everything you can craft traces back to four activities: digging, harvesting
-glowing flora, fighting the shadow creatures that condense in the dark, and mining
-metal deposits for the Ferromancy tier of magic.
+Everything you can craft traces back to five activities: digging, harvesting
+glowing flora, fighting the shadow creatures that condense in the dark, mining
+metal deposits for the Ferromancy tier, and surviving Resonance Storms to charge
+gems for the Tempestlight tier of magic.
 
 ---
 
@@ -39,9 +44,12 @@ metal deposits for the Ferromancy tier of magic.
 | **Left click** | Dig terrain |
 | **Right click** | Place terrain |
 | **F** | Strike (attack Umbrals / remove placed blocks) |
-| **E** | Harvest flora · retune a Note Block |
-| **1 / 2** | Cast: Ferropull · Ferropush |
-| **3 / 4 / 5** | Cast: Lumen Bloom · Worldshaper Burst · Skyward Step |
+| **E** | Harvest flora · retune a Note Block · interact with storm catcher |
+| **R** | Inhale a charged gem (enter Tempestlight holding mode) |
+| **H** | Place a storm catcher (requires one in inventory) |
+| **1 / 2** | Cast: Bondlash · Ferropull |
+| **3 / 4 / 5** | Cast: Ferropush · Lumen Bloom · Worldshaper Burst |
+| **6 / 7** | Cast: Skylash · Skyward Step |
 | **G** | Toggle Vigor channel (burn pewter) |
 | **T** | Toggle Keensight channel (burn tin) |
 | **Tab** | Metal sense — blue lines to nearby metal sources |
@@ -124,6 +132,9 @@ all its light makes it dangerous.
 | **Pewter Flakes** | consumable | Refine Vigorite Ore · stack 99 | Fuel Vigor channel |
 | **Tin Flakes** | consumable | Refine Keenglass Shard · stack 99 | Fuel Keensight channel |
 | **Ferric Coin** | material | Crafted · stack 99 | Thrown projectile; Ferropull/push anchor |
+| **Dun Gem** | material | Crafted · stack 16 | Rack on a storm catcher to charge during a Resonance Storm |
+| **Charged Gem** | material | Storm-charged dun gem · stack 16 | Inhale (R) to fill your Tempestlight well (+40 charge) |
+| **Storm Catcher** | placeable | Crafted · stack 8 | Sky-exposed crystal pylon that charges up to 4 dun gems per storm |
 
 ---
 
@@ -143,6 +154,8 @@ you can afford them.
 | **Pewter Flakes** | 1 Vigorite Ore | 2 Pewter Flakes |
 | **Tin Flakes** | 1 Keenglass Shard | 2 Tin Flakes |
 | **Ferric Coin** | 1 Crystal Shard + 2 Soil | 8 Ferric Coins |
+| **Dun Gem** | 3 Crystal Shards + 1 Glow Spore | 1 Dun Gem |
+| **Storm Catcher** | 2 Crystal Shards + 1 Keenglass Shard + 2 Soil | 1 Storm Catcher |
 
 The full chain to your first sequencer: dig until you have shards and soil,
 harvest mushrooms and flowers for spores and petals, craft bricks → torch →
@@ -160,24 +173,29 @@ Anthesis uses a hard-magic system: every ability has a fixed cost and a fixed
 cooldown, no exceptions. **Lumen** — living light gathered by harvesting flora,
 stored in your lumen well (capacity 100) — powers the three classic abilities.
 **Metals** power the Ferromancy tier: mine deposits, refine ores into flakes,
-and burn flakes for instant or sustained effects.
+and burn flakes for instant or sustained effects. **Tempestlight** — charged storm
+energy inhaled from a charged gem — powers the two lash abilities.
 
-Ability hotkeys are alphabetical by ability id, so the full five-slot order is:
+Ability hotkeys are alphabetical by ability id. The full seven-slot order is:
 
 | Key | Ability | Resource | Cost | Cooldown | Effect |
 |-----|---------|----------|------|----------|--------|
-| **1** | **Ferropull** | Iron (12) | 12 iron charge | 0.8 s | Yanks you toward a metal anchor, or flings a light source toward you. |
-| **2** | **Ferropush** | Steel (12) | 12 steel charge | 0.8 s | Launches you off an anchor (coin-jumping), or hurls a light source away. |
-| **3** | **Lumen Bloom** | Lumen (15) | 15 lumen | 2.0 s | Plants a pulsing mote of light. Pushes back the dark — blocks Umbral spawns. |
-| **4** | **Worldshaper Burst** | Lumen (25) | 25 lumen | 3.0 s | Tears a sphere of terrain apart — digging as a spell. |
-| **5** | **Skyward Step** | Lumen (10) | 10 lumen | 1.5 s | The ground pushes back beneath you, launching you into the air. |
+| **1** | **Bondlash** | Tempestlight | 15 | 1.0 s | Roots the nearest Umbral within 2 m in place for 5 s. It keeps attacking but cannot chase. |
+| **2** | **Ferropull** | Iron | 12 | 0.8 s | Yanks you toward a metal anchor, or flings a light source toward you. |
+| **3** | **Ferropush** | Steel | 12 | 0.8 s | Launches you off an anchor (coin-jumping), or hurls a light source away. |
+| **4** | **Lumen Bloom** | Lumen | 15 | 2.0 s | Plants a pulsing mote of light. Pushes back the dark — blocks Umbral spawns. |
+| **5** | **Worldshaper Burst** | Lumen | 25 | 3.0 s | Tears a sphere of terrain apart — digging as a spell. |
+| **6** | **Skylash** | Tempestlight | 20 | 1.0 s | Snaps your gravity to the nearest cardinal axis for 6 s — fall sideways, walk on walls. |
+| **7** | **Skyward Step** | Lumen | 10 | 1.5 s | The ground pushes back beneath you, launching you into the air. |
 
-(Cooldowns are defined in ticks at 10 ticks per second. Ability slot order is
-alphabetical by id — ferro_pull, ferro_push, lumen_bloom, shape_burst, skyward.)
+(Cooldowns in seconds at 10 ticks/s. Slot order is alphabetical by ability id:
+bond_lash, ferro_pull, ferro_push, lumen_bloom, shape_burst, sky_lash, skyward.)
 
 Tactically: Lumen Bloom is your portable safety, Worldshaper Burst is bulk
 excavation, and Skyward Step is mobility. The ferro abilities are your movement
-and combat engine once you have the metals to fuel them.
+and combat engine once you have metals. Bondlash pins Umbrals; Skylash lets you
+escape or explore vertical surfaces — but the camera does not reorient with
+gravity in v1, so movement stays yaw-based.
 
 ---
 
@@ -329,6 +347,79 @@ The spatial arrangement *is* the pattern. A tight cluster north of the core
 is a burst at the top of the bar; blocks at north, east, south, and west are
 a four-on-the-floor. Because the core shares its clock with the adaptive
 soundtrack, your loop always plays in time with the music.
+
+---
+
+## Tempestlight and Resonance Storms
+
+Resonance Storms are the sky's anger made lethal — and your only source of
+Tempestlight, the third magic resource.
+
+### Recognising a Storm
+
+The sky bruises violet, fog thickens, the music drops to a warning pulse, and the
+HUD banner reads **A RESONANCE STORM APPROACHES**. You have 45 seconds before it
+hits. Storms come every 6–10 minutes; each lasts 90 seconds.
+
+During the storm the banner reads **RESONANCE STORM**. Every 2 seconds, any
+sky-exposed player takes **3 HP** per pulse. Thirty-plus pulses in the open will
+kill you. Find or dig shelter immediately.
+
+### Storm Catchers
+
+A **Storm Catcher** is a small crystal pylon that charges dun gems during a storm.
+Place it somewhere with a clear line to the sky — no roof overhead.
+
+1. Craft **Dun Gems** (3 Crystal Shards + 1 Glow Spore → 1 Dun Gem).
+2. Craft a **Storm Catcher** (2 Crystal Shards + 1 Keenglass Shard + 2 Soil → 1
+   Storm Catcher). Press **H** to place it.
+3. Press **E** near the catcher (with dun gems in inventory) to rack up to 4 gems.
+4. Survive the storm underground. Each 2-second pulse that hits the catcher converts
+   one dun gem to a **Charged Gem**. A full rack of 4 can charge in a single storm.
+5. Press **E** near the catcher again to collect charged gems (and any uncharged
+   dun gems) back into inventory.
+
+A catcher under a roof charges nothing — sky exposure is required, the same rule
+that makes the catcher dangerous to stand next to. Keep your shelter and your
+catcher on different plots.
+
+### Inhale (R)
+
+Press **R** with a charged gem in inventory to inhale it. You consume the gem,
+gain 40 Tempestlight charge (well capacity 100), and the gem returns to your
+inventory as an inert dun gem ready for the next storm.
+
+While holding Tempestlight:
+
+- **Glow.** An OmniLight3D grows to 3.0 energy (7 m range) as your charge rises.
+  The HUD tempest meter beside the lumen orb shows your fill ratio.
+- **Speed.** +20% move speed (composes multiplicatively with Vigor).
+- **Healing.** Every second, if you are hurt, the well spends 2 charge and heals
+  1 HP. Roughly 1 HP/s while the supply lasts.
+- **Leak.** The well drains 1 charge/s even when you do nothing. One charged gem
+  (~40 charge) lasts about 40 seconds. Two gems fill the well to 80 and last
+  roughly 80 seconds.
+
+### Lash Abilities
+
+While holding Tempestlight you can cast Bondlash (slot 1) and Skylash (slot 6).
+
+**Bondlash (1):** Costs 15 charge, 1-second cooldown. Roots the nearest Umbral
+within 2 m for 5 seconds — it freezes in place but keeps attacking. Use it to
+stop a chasing Umbral while you repositon, or to lock a Shardling for a
+Ferropull grab.
+
+**Skylash (6):** Costs 20 charge, 1-second cooldown. Snaps your gravity to the
+nearest cardinal axis (the direction you are looking, snapped) for 6 seconds.
+Walk on walls, fall sideways, or run along the underside of a cave roof.
+
+> **v1 limitation.** The camera does not reorient with gravity. Movement input
+> (WASD) stays yaw-based — "forward" is still your look direction projected onto
+> the horizontal plane. When gravity is sideways, this means "forward" is no
+> longer "forward relative to the floor". Plan your momentum accordingly.
+
+Skylash expires or you can re-cast to snap to a new axis mid-lash (refreshes
+the 6-second window and re-snaps to the current camera direction).
 
 ---
 

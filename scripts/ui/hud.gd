@@ -54,6 +54,22 @@ const METAL_GLOW_COLOR := Color(0.55, 0.85, 1.0, 1.0)
 ## Background color for metal gauge bar track.
 const METAL_TRACK_COLOR := Color(0.06, 0.06, 0.14, 0.75)
 
+## Tempest meter colors: empty (dim violet) → full (bright white-violet).
+const TEMPEST_EMPTY_COLOR := Color(0.35, 0.20, 0.60, 0.85)
+const TEMPEST_FULL_COLOR := Color(0.90, 0.75, 1.0, 1.0)
+## Background track color for the tempest bar.
+const TEMPEST_TRACK_COLOR := Color(0.08, 0.04, 0.18, 0.75)
+## Pulse threshold below which the tempest bar pulses (same semantics as lumen).
+const TEMPEST_PULSE_THRESHOLD := 0.1
+
+## Storm banner strings per weather state.
+const STORM_BANNER_TEXT := {
+	&"warning": "A RESONANCE STORM APPROACHES",
+	&"storm": "RESONANCE STORM",
+}
+## Fade-out duration for the storm banner when returning to calm (seconds).
+const STORM_BANNER_FADE_SECONDS := 1.2
+
 var _toast_tween: Tween = null
 
 var _well: Object = null
@@ -73,6 +89,17 @@ var _metal_container: VBoxContainer = null
 var _metal_fills: Dictionary = {}
 ## Value labels for each metal kind, keyed by StringName kind.
 var _metal_value_labels: Dictionary = {}
+
+## Bound TempestLight (may be null).
+var _tempest: Object = null
+## Tempest meter container (built in code; null until bind_tempest called).
+var _tempest_container: VBoxContainer = null
+## Fill bar rect for the tempest meter.
+var _tempest_fill: ColorRect = null
+## Storm banner label (built in code on first show_storm_banner call).
+var _storm_banner: Label = null
+## Active tween for the storm banner fade.
+var _storm_banner_tween: Tween = null
 
 ## Bound Health object (RefCounted; may be null).
 var _health: Object = null
@@ -229,6 +256,59 @@ func bind_metals(reserves: Object, channels: Object) -> void:
 			var well: Object = _reserves.well(kind)
 			if well != null and well.has_method("current") and well.has_method("capacity"):
 				_on_metal_changed(kind, well.current(), well.capacity())
+
+
+## Wire the tempest meter to a TempestLight object (duck-typed; may be null).
+## Builds a compact luminous bar near the Lumen orb, mirroring bind_metals'
+## code-built gauge approach.  Tolerates null: the meter shows empty and inert.
+## tempest must expose well() -> LumenWell-like (current(), capacity(), changed).
+func bind_tempest(tempest: Object) -> void:
+	if (
+		_tempest != null
+		and _tempest.has_method("well")
+		and _tempest.well() != null
+		and _tempest.well().has_signal("changed")
+		and _tempest.well().changed.is_connected(_on_tempest_well_changed)
+	):
+		_tempest.well().changed.disconnect(_on_tempest_well_changed)
+
+	_tempest = tempest
+	_build_tempest_meter()
+
+	if _tempest != null and _tempest.has_method("well"):
+		var w: Object = _tempest.well()
+		if w != null and w.has_signal("changed"):
+			w.changed.connect(_on_tempest_well_changed)
+		if w != null and w.has_method("current") and w.has_method("capacity"):
+			_on_tempest_well_changed(w.current(), w.capacity())
+		else:
+			_on_tempest_well_changed(0.0, 100.0)
+	else:
+		_on_tempest_well_changed(0.0, 100.0)
+
+
+## Show a top-centre storm state banner.  state is one of &"warning", &"storm",
+## or &"calm".  warning/storm display the pinned message; calm fades the banner
+## out.  The label is built in code on first call; subsequent calls reuse it.
+func show_storm_banner(state: StringName) -> void:
+	_ensure_storm_banner()
+	if _storm_banner_tween != null and _storm_banner_tween.is_valid():
+		_storm_banner_tween.kill()
+
+	if state == &"warning" or state == &"storm":
+		_storm_banner.text = STORM_BANNER_TEXT.get(state, "")
+		_storm_banner.modulate = Color(1.0, 1.0, 1.0, 1.0)
+		_storm_banner.visible = true
+	else:
+		# Calm: fade out.
+		if _storm_banner.modulate.a > 0.0:
+			_storm_banner_tween = create_tween()
+			_storm_banner_tween.tween_property(
+				_storm_banner, "modulate:a", 0.0, STORM_BANNER_FADE_SECONDS
+			)
+			_storm_banner_tween.tween_callback(func() -> void: _storm_banner.visible = false)
+		else:
+			_storm_banner.visible = false
 
 
 ## Show the death overlay with a countdown message. respawn_in_s is informational.
@@ -697,3 +777,94 @@ func _on_channel_changed(channel_id: StringName, active: bool) -> void:
 		return
 	var fill: ColorRect = _metal_fills[kind]
 	fill.color = METAL_GLOW_COLOR if active else METAL_BASE_COLOR
+
+
+# ---------------------------------------------------------------------------
+# Tempest meter (code-built, mirrors metal gauges)
+# ---------------------------------------------------------------------------
+
+
+## Build a compact tempest bar and attach it above the Lumen orb in code.
+## Safe to call multiple times — removes the previous container first.
+func _build_tempest_meter() -> void:
+	_tempest_fill = null
+	if _tempest_container != null and is_instance_valid(_tempest_container):
+		_tempest_container.queue_free()
+	_tempest_container = null
+
+	_tempest_container = VBoxContainer.new()
+	_tempest_container.name = "TempestMeter"
+	_tempest_container.add_theme_constant_override("separation", 2)
+	# Park near the Lumen orb — anchored top-right of the HUD.
+	# The integrator owns final layout; we use PRESET_TOP_RIGHT as a sensible
+	# default that keeps it visible without obscuring the metal gauges.
+	_tempest_container.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	_tempest_container.position = Vector2(-140.0, 8.0)
+	_tempest_container.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_tempest_container)
+
+	# Row: label + track + fill.
+	var row := HBoxContainer.new()
+	row.name = "TempestRow"
+	row.add_theme_constant_override("separation", 4)
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_tempest_container.add_child(row)
+
+	var kind_label := Label.new()
+	kind_label.text = "TMP"
+	kind_label.custom_minimum_size = Vector2(28, 0)
+	kind_label.add_theme_color_override("font_color", Color(0.80, 0.70, 1.0, 0.95))
+	kind_label.add_theme_font_size_override("font_size", 11)
+	kind_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.add_child(kind_label)
+
+	var track := ColorRect.new()
+	track.custom_minimum_size = Vector2(60, 8)
+	track.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	track.color = TEMPEST_TRACK_COLOR
+	track.mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+	var fill := ColorRect.new()
+	fill.name = "TempestFill"
+	fill.set_anchors_preset(Control.PRESET_FULL_RECT)
+	fill.color = TEMPEST_EMPTY_COLOR
+	fill.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	fill.anchor_right = 0.0
+	track.add_child(fill)
+	row.add_child(track)
+	_tempest_fill = fill
+
+
+## Repaint the tempest meter from the well's changed signal.
+func _on_tempest_well_changed(current: float, capacity: float) -> void:
+	if _tempest_fill == null:
+		return
+	var cap := maxf(capacity, 0.001)
+	var ratio := clampf(current / cap, 0.0, 1.0)
+	_tempest_fill.anchor_right = ratio
+	_tempest_fill.color = TEMPEST_EMPTY_COLOR.lerp(TEMPEST_FULL_COLOR, ratio)
+
+
+# ---------------------------------------------------------------------------
+# Storm banner (code-built top-centre label)
+# ---------------------------------------------------------------------------
+
+
+## Build the storm banner label on first use; subsequent calls are no-ops.
+func _ensure_storm_banner() -> void:
+	if _storm_banner != null and is_instance_valid(_storm_banner):
+		return
+	_storm_banner = Label.new()
+	_storm_banner.name = "StormBanner"
+	_storm_banner.set_anchors_preset(Control.PRESET_TOP_WIDE)
+	_storm_banner.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_storm_banner.vertical_alignment = VERTICAL_ALIGNMENT_TOP
+	_storm_banner.position = Vector2(0.0, 24.0)
+	_storm_banner.add_theme_color_override("font_color", Color(0.90, 0.78, 1.0, 1.0))
+	_storm_banner.add_theme_color_override("font_outline_color", Color(0.12, 0.04, 0.22, 0.92))
+	_storm_banner.add_theme_constant_override("outline_size", 4)
+	_storm_banner.add_theme_font_size_override("font_size", 18)
+	_storm_banner.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_storm_banner.modulate = Color(1.0, 1.0, 1.0, 0.0)
+	_storm_banner.visible = false
+	add_child(_storm_banner)

@@ -12,6 +12,8 @@ const EXPECTED_HEAT := {
 	&"dig": 0.06,
 	&"cast": 0.15,
 	&"harvest": 0.04,
+	&"storm_warning": 0.25,
+	&"storm": 0.5,
 }
 const EXPECTED_DECAY := 0.012
 const EPS := 1e-6

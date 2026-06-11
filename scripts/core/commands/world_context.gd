@@ -59,3 +59,13 @@ var metal_reserves: MetalReserves
 ## Signature: Callable(origin: Vector3, velocity: Vector3). Assigned by World
 ## during wiring. An invalid Callable is safe — [ThrowCoinCommand] guards it.
 var coin_spawn: Callable = Callable()
+
+## The player's tempest investiture pool. Drives inhale, leak, regen, and the
+## speed/glow effects of held Stormlight. May be null in legacy / unit-test
+## contexts where tempest is not wired.
+var tempest: TempestLight
+
+## The world weather state machine. Drives storm scheduling, pulse damage, and
+## visual transitions. May be null in legacy / unit-test contexts where weather
+## is not wired.
+var weather: WeatherSystem

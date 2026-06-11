@@ -28,6 +28,8 @@ const HEAT := {
 	&"dig": 0.06,
 	&"cast": 0.15,
 	&"harvest": 0.04,
+	&"storm_warning": 0.25,
+	&"storm": 0.5,
 }
 
 ## Amount the level decays per [method tick]. At the simulation rate of 10 Hz

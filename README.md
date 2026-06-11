@@ -2,7 +2,7 @@
 
 A cosmic-whimsical open-source voxel adventure game — smooth diggable terrain, Sanderson-inspired magic, deep crafting, and EDM-driven adaptive music.
 
-> **Status: Pre-alpha, playable vertical slice.** You can wander a glowing cosmic world, dig and reshape the terrain, harvest bioluminescent flora, craft, cast lumen magic, burn metals with Ferromancy channels, fight Umbrals in the dark, and compose music with in-world sequencer blocks — all to an adaptive EDM soundtrack.
+> **Status: Pre-alpha, playable vertical slice.** You can wander a glowing cosmic world, dig and reshape the terrain, harvest bioluminescent flora, craft, cast lumen magic, burn metals with Ferromancy channels, survive Resonance Storms to charge gems and unlock Tempestlight, fight Umbrals in the dark, and compose music with in-world sequencer blocks — all to an adaptive EDM soundtrack.
 
 **New here? Read the [Gameplay Guide](docs/GAMEPLAY.md)** — every item, recipe, ability, and creature, plus how the dig → harvest → craft → compose loop fits together.
 
@@ -38,7 +38,9 @@ Exploration-first. **Umbrals** — shadow wisps with glowing cores — condense 
 | ![Sequencer](docs/media/phase6-sequencer.png) The in-world music sequencer — a Core ringed by Note Blocks | ![Pause menu](docs/media/pause-menu.png) Pause menu — settings + key bindings |
 | ![HUD](docs/media/hud-orbs-mid.png) Diablo-style HUD — liquid resource orbs, spell bar, quick belt | ![Metal reserves](docs/media/phase8-1-reserves.png) Metal reserve bars — four burnables beside the lumen orb |
 | ![Vigor active](docs/media/phase8-2-vigor.png) Vigor burning — pewter-fuelled speed and strike boost | ![Ferropush](docs/media/phase8-3-ferro-push.png) Ferropush off a Lodestone deposit |
-| ![Coin throw](docs/media/phase8-4-coin.png) Ferric coin in flight — Ferropush anchor and projectile | |
+| ![Coin throw](docs/media/phase8-4-coin.png) Ferric coin in flight — Ferropush anchor and projectile | ![Storm approaches](docs/media/phase9-1-setup.png) Storm catcher racked with dun gems, violet sky warning |
+| ![Resonance Storm](docs/media/phase9-2-storm.png) Resonance Storm — bruised sky, fog, and banner | ![Catcher charging](docs/media/phase9-3-catcher.png) Storm pulse charging gems on a sky-exposed catcher |
+| ![Tempestlight glow](docs/media/phase9-4-tempest-glow.png) Tempestlight held — veins glow, 20% speed boost | ![Skylash](docs/media/phase9-5-skylash.png) Skylash — gravity snapped sideways along a cliff face |
 
 ---
 
@@ -55,6 +57,7 @@ Exploration-first. **Umbrals** — shadow wisps with glowing cores — condense 
 | 6 — Music Sequencer | In-world composing with craftable blocks (signature) | ✅ |
 | 7 — Co-op | Authoritative command layer → multiplayer | ✅ |
 | 8 — Ferromancy | Metal-powered push/pull, sustained channels, status effects | ✅ |
+| 9 — Tempestlight | Resonance Storms, gem economy, Tempestlight pool, Skylash + Bondlash | ✅ |
 
 ---
 
@@ -108,9 +111,12 @@ The editor binary lands at `tools/godot/macos_editor.app` (gitignored).
 | **Left click** | Dig terrain |
 | **Right click** | Place terrain |
 | **F** | Strike (attack Umbrals / remove placed blocks) |
-| **E** | Harvest flora · retune a Note Block |
-| **1 / 2** | Cast: Ferropull · Ferropush |
-| **3 / 4 / 5** | Cast: Lumen Bloom · Worldshaper Burst · Skyward Step |
+| **E** | Harvest flora · retune a Note Block · interact with storm catcher |
+| **R** | Inhale a charged gem (enter Tempestlight holding mode) |
+| **H** | Place a storm catcher (requires one in inventory) |
+| **1 / 2** | Cast: Bondlash · Ferropull |
+| **3 / 4 / 5** | Cast: Ferropush · Lumen Bloom · Worldshaper Burst |
+| **6 / 7** | Cast: Skylash · Skyward Step |
 | **G** | Toggle Vigor (burn pewter — speed + strike boost) |
 | **T** | Toggle Keensight (burn tin — brightened world) |
 | **Tab** | Metal sense — blue lines to nearby metal sources |
@@ -123,10 +129,13 @@ The editor binary lands at `tools/godot/macos_editor.app` (gitignored).
 | **Esc** | Pause menu — settings (mouse sensitivity, volume, fullscreen) + key bindings |
 
 Harvest glowing flora to fill your lumen well — magic costs lumen, and the
-flora's glow is also what keeps Umbrals from spawning near you. Craft a
-Sequencer Core plus Note Blocks (press I) and arrange the blocks in a ring around
-the core: each block's angle picks its step in a 16-step loop synced to the
-soundtrack, and E retunes its pitch.
+flora's glow is also what keeps Umbrals from spawning near you. Mine metal
+deposits and refine ores into flakes for Ferromancy. Craft dun gems and storm
+catchers, rack them outside before a Resonance Storm hits, then inhale a charged
+gem for Tempestlight: healing, speed, Skylash (gravity sideways), and Bondlash
+(root Umbrals in place). Craft a Sequencer Core plus Note Blocks (press I) and
+arrange the blocks in a ring around the core: each block's angle picks its step
+in a 16-step loop synced to the soundtrack, and E retunes its pitch.
 
 For the full picture — loot tables, recipes, ability costs, creature stats, and
 how to build your first sequencer — see the **[Gameplay Guide](docs/GAMEPLAY.md)**.
