@@ -55,6 +55,10 @@ const PLACE_RADIUS := 1.4
 ## Maximum distance in metres at which a melee strike connects.
 const STRIKE_REACH := 2.8
 
+## User-adjustable mouse-look multiplier on top of MOUSE_SENSITIVITY.
+## World pushes GameSettings.mouse_sensitivity into this.
+var sensitivity_scale := 1.0
+
 # ---------------------------------------------------------------------------
 # Node references (assigned in _ready)
 # ---------------------------------------------------------------------------
@@ -82,8 +86,9 @@ func _ready() -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	# Mouse-look only while captured
 	if event is InputEventMouseMotion and _mouse_captured:
-		rotation.y -= event.relative.x * MOUSE_SENSITIVITY
-		_camera.rotation.x -= event.relative.y * MOUSE_SENSITIVITY
+		var sensitivity := MOUSE_SENSITIVITY * sensitivity_scale
+		rotation.y -= event.relative.x * sensitivity
+		_camera.rotation.x -= event.relative.y * sensitivity
 		_camera.rotation.x = clamp(_camera.rotation.x, -PI * 0.45, PI * 0.45)
 		return
 
@@ -100,10 +105,6 @@ func _unhandled_input(event: InputEvent) -> void:
 			_try_place()
 
 	if event is InputEventKey and event.pressed:
-		var action_toggle := "toggle_mouse_capture"
-		if InputMap.has_action(action_toggle) and event.is_action_pressed(action_toggle):
-			_release_mouse()
-
 		var action_interact := "interact"
 		if InputMap.has_action(action_interact) and event.is_action_pressed(action_interact):
 			_try_interact()
@@ -296,8 +297,3 @@ func _cast_target() -> Vector3:
 func _capture_mouse() -> void:
 	Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
 	_mouse_captured = true
-
-
-func _release_mouse() -> void:
-	Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
-	_mouse_captured = false

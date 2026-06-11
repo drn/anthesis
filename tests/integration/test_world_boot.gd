@@ -198,3 +198,19 @@ func test_player_cast_signal_connected() -> void:
 		if conn["callable"].get_object() == world:
 			routed_to_world = true
 	assert_true(routed_to_world, "cast_requested must route to a World handler")
+
+
+func test_pause_menu_present_and_settings_applied() -> void:
+	var world := _boot()
+	var menu := world.hud().get_node_or_null("PauseMenu")
+	assert_not_null(menu, "a PauseMenu must be instanced under the HUD")
+	assert_true(menu is PauseMenu, "the PauseMenu node must carry the PauseMenu script")
+	assert_false((menu as PauseMenu).visible, "the pause menu must boot hidden")
+	var settings: GameSettings = world.get("_settings")
+	assert_not_null(settings, "World must build a GameSettings on boot")
+	assert_almost_eq(
+		world.player().sensitivity_scale,
+		settings.mouse_sensitivity,
+		0.001,
+		"the player's mouse sensitivity must mirror GameSettings"
+	)

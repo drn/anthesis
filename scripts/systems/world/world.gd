@@ -35,6 +35,7 @@ const _CRYSTAL_SCENE := preload("res://scenes/props/crystal.tscn")
 const _HUD_SCENE := preload("res://scenes/ui/hud.tscn")
 const _LUMEN_BLOOM_SCENE := preload("res://scenes/props/lumen_bloom.tscn")
 const _SESSION_PANEL_SCENE := preload("res://scenes/ui/session_panel.tscn")
+const _PAUSE_MENU_SCENE := preload("res://scenes/ui/pause_menu.tscn")
 
 ## Item/recipe data and inventory sizing (Phase 2).
 const INVENTORY_SIZE := 24
@@ -127,6 +128,11 @@ var _player_sync: PlayerSync
 var _remote_players: Node3D
 var _session_panel: SessionPanel
 
+## Pause menu + persisted settings (Escape).
+var _settings: GameSettings
+var _settings_applier: SettingsApplier
+var _pause_menu: PauseMenu
+
 var _poll_elapsed := 0.0
 var _player_placed := false
 var _flora_scattered := false
@@ -148,6 +154,7 @@ func _ready() -> void:
 	_build_music()
 	_build_sequencer()
 	_build_net()
+	_build_pause_menu()
 	# Park the player up high until terrain streams in, then drop them onto it.
 	_player.global_position = Vector3(0.0, PLAYER_SAFE_ALTITUDE, 0.0)
 
@@ -685,6 +692,53 @@ func _replay_log(log_entries: Array) -> void:
 		var cmd := CommandCodec.decode(entry, self)
 		if cmd != null:
 			_command_bus.execute(cmd)
+
+
+# ---------------------------------------------------------------------------
+# Pause menu + settings (Escape)
+# ---------------------------------------------------------------------------
+
+
+## Stand up the Escape pause menu and the persisted [GameSettings] it edits.
+##
+## The menu lives in the HUD CanvasLayer, added after the other panels so it
+## overlays them, and only emits intent signals — World owns pausing, quitting,
+## and applying each setting to the engine. Settings load from (and save back
+## to) user://settings.cfg, so they survive restarts.
+func _build_pause_menu() -> void:
+	_settings = GameSettings.new()
+	_settings.load_from_file()
+	_settings_applier = SettingsApplier.new(_player)
+	_pause_menu = _PAUSE_MENU_SCENE.instantiate()
+	_hud.add_child(_pause_menu)
+	_pause_menu.bind(_settings)
+	_pause_menu.opened.connect(_on_menu_opened)
+	_pause_menu.closed.connect(_on_menu_closed)
+	_pause_menu.quit_requested.connect(_on_quit_requested)
+	_settings.changed.connect(_on_setting_changed)
+	_settings_applier.apply_all(_settings)
+
+
+## Pause the simulation while the menu is up — but only offline: in a live
+## co-op session the shared world keeps running under the menu overlay. The
+## menu itself processes ALWAYS, so Escape still closes it while paused.
+func _on_menu_opened() -> void:
+	if _session == null or not _session.is_active():
+		get_tree().paused = true
+
+
+func _on_menu_closed() -> void:
+	get_tree().paused = false
+
+
+func _on_quit_requested() -> void:
+	get_tree().quit()
+
+
+## A setting changed in the menu: apply it to the engine and persist the file.
+func _on_setting_changed(key: StringName, _value: Variant) -> void:
+	_settings_applier.apply(key, _settings)
+	_settings.save_to_file()
 
 
 # ---------------------------------------------------------------------------
