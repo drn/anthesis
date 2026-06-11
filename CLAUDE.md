@@ -210,6 +210,15 @@ Traps seen building phases 1-7. Check these before debugging from scratch:
 - **`--import` first.** A fresh worktree has no `.godot/imported/` cache. Run
   `make import` (or `<binary> --headless --path . --import`) before the first
   test run or after adding any `.tres` / asset, or you get missing-import errors.
+  Also re-run it after a rebase/pull that brings in new scripts — a stale
+  `class_name` cache produces walls of `Identifier "X" not declared` parse errors.
+- **Push with an explicit refspec.** A bare `git push` (or
+  `git push --force-with-lease`) under `push.default=matching` pushes *every*
+  matching local branch — a stale local `master` will force-rewind
+  `origin/master`, and `--force-with-lease` does not protect against it (the
+  lease checks the expected remote value, not the direction of movement). Use
+  `git push origin HEAD` / `git push origin <branch>`, or set
+  `git config push.default current` in the clone.
 - **`height_at` returns NAN.** Terrain streams asynchronously; `VoxelWorld.height_at`
   returns `NAN` until the chunk streams in. Gate all position-dependent logic on
   `not is_nan(...)`. World parks the player at `PLAYER_SAFE_ALTITUDE` and polls.
