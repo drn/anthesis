@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="ItemDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/core/items/item_def.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"ferric_coin"
+display_name = "Ferric Coin"
+max_stack = 99
+category = &"material"
+swatch_color = Color(0.55, 0.48, 0.3, 1)
+description = "A thumb-sized disc of compressed crystal and soil fused with ferric investiture. Toss one ahead and burn steel — the coin becomes a launch anchor, a step through empty air. Every Ferromancer carries a pocketful of possibilities."

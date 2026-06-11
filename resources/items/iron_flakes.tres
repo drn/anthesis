@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="ItemDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/core/items/item_def.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"iron_flakes"
+display_name = "Iron Flakes"
+max_stack = 99
+category = &"consumable"
+swatch_color = Color(0.38, 0.52, 0.75, 1)
+description = "Crushed lodestone refined to a fine powder that tastes faintly of ozone. Burn a pinch and feel the invisible threads snap taut — every nail, coin, and ore vein in range lurches toward the rising lines of blue."

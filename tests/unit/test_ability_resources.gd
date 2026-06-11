@@ -11,8 +11,10 @@ extends GutTest
 
 const ABILITIES_DIR := "res://resources/abilities"
 
-## Phase 3 pinned ability ids.
+## Phase 3+8 pinned ability ids.
 const EXPECTED_ABILITY_IDS: Array = [
+	&"ferro_pull",
+	&"ferro_push",
 	&"lumen_bloom",
 	&"shape_burst",
 	&"skyward",
@@ -188,3 +190,26 @@ func test_individual_abilities_match_pinned_spec() -> void:
 	assert_true(ab.swatch_color.g > 0.5, "skyward swatch should be cyan (green channel)")
 	assert_true(ab.swatch_color.b > 0.5, "skyward swatch should be cyan (blue channel)")
 	assert_true(ab.swatch_color.r < 0.3, "skyward swatch should be cyan (low red)")
+
+	# ferro_pull
+	ab = _load_ability("ferro_pull")
+	assert_eq(ab.id, &"ferro_pull")
+	assert_eq(ab.kind, &"ferro_pull")
+	assert_eq(ab.resource_kind, &"iron")
+	assert_eq(ab.lumen_cost, 12.0)
+	assert_eq(ab.cooldown_ticks, 8)
+	assert_eq(ab.magnitude, 9.0)
+	# Steel-blue: blue dominant over red.
+	assert_true(ab.swatch_color.b > ab.swatch_color.r, "ferro_pull swatch should be blue-dominant")
+
+	# ferro_push
+	ab = _load_ability("ferro_push")
+	assert_eq(ab.id, &"ferro_push")
+	assert_eq(ab.kind, &"ferro_push")
+	assert_eq(ab.resource_kind, &"steel")
+	assert_eq(ab.lumen_cost, 12.0)
+	assert_eq(ab.cooldown_ticks, 8)
+	assert_eq(ab.magnitude, 11.0)
+	# Silver: all channels high, relatively balanced.
+	assert_true(ab.swatch_color.r > 0.5, "ferro_push swatch should be silver (high red)")
+	assert_true(ab.swatch_color.g > 0.5, "ferro_push swatch should be silver (high green)")

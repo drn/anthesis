@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="AbilityDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/core/magic/ability_def.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"ferro_push"
+display_name = "Ferropush"
+kind = &"ferro_push"
+resource_kind = &"steel"
+lumen_cost = 12.0
+cooldown_ticks = 8
+magnitude = 11.0
+swatch_color = Color(0.78, 0.82, 0.9, 1)
+description = "Steel investiture detonates outward from your core. You become the fulcrum — the anchor behind you, the sky ahead. A single coin tossed at the right moment becomes a stepping stone across empty air, and the ground itself becomes something optional."

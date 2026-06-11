@@ -20,22 +20,47 @@ signal cast_succeeded(ability: AbilityDef)
 ## &"cooldown", &"cost", or &"no_effect".
 signal cast_failed(ability: AbilityDef, reason: StringName)
 
-var _well: LumenWell
+## Resolves the [LumenWell] an ability spends from. Either a single well used for
+## every kind (legacy) or a Callable(kind: StringName) -> LumenWell resolver.
+var _well_resolver: Callable
 var _clock_tick: Callable
 ## Maps ability id -> the tick at which it was last cast successfully.
 var _last_cast: Dictionary = {}
 
 
-## Construct with the lumen [param well] and a [param clock_tick] Callable that
-## returns the current simulation tick as an int.
-func _init(well: LumenWell, clock_tick: Callable) -> void:
-	_well = well
+## Construct with the lumen [param wells] source and a [param clock_tick] Callable
+## that returns the current simulation tick as an int.
+##
+## [param wells] is EITHER a single [LumenWell] (legacy: that one well backs every
+## ability regardless of its [member AbilityDef.resource_kind]) OR a
+## Callable(kind: StringName) -> LumenWell resolver (multi-well: the kind maps to a
+## per-resource well; an unknown kind may resolve to null and is then treated as
+## unaffordable). This keeps the original single-well call sites source-compatible.
+func _init(wells: Variant, clock_tick: Callable) -> void:
+	if wells is Callable:
+		_well_resolver = wells
+	else:
+		var only_well: LumenWell = wells
+		_well_resolver = func(_kind: StringName) -> LumenWell: return only_well
 	_clock_tick = clock_tick
 
 
-## True when [param ability] is off cooldown and the well can afford its cost.
+## The well [param ability] spends from, by its [member AbilityDef.resource_kind]
+## (an empty kind defaults to &"lumen"). May be null when the resolver does not
+## know the kind, in which case the ability is treated as unaffordable.
+func _well_for(ability: AbilityDef) -> LumenWell:
+	var kind: StringName = ability.resource_kind
+	if kind == &"":
+		kind = &"lumen"
+	return _well_resolver.call(kind)
+
+
+## True when [param ability] is off cooldown and its well can afford its cost.
 func can_cast(ability: AbilityDef) -> bool:
-	return cooldown_remaining(ability) <= 0 and _well.can_afford(ability.lumen_cost)
+	var well := _well_for(ability)
+	if well == null:
+		return false
+	return cooldown_remaining(ability) <= 0 and well.can_afford(ability.lumen_cost)
 
 
 ## Ticks remaining before [param ability] may be cast again; 0 when ready.
@@ -65,14 +90,15 @@ func try_cast(ability: AbilityDef, effect: Callable) -> bool:
 	if cooldown_remaining(ability) > 0:
 		cast_failed.emit(ability, &"cooldown")
 		return false
-	if not _well.can_afford(ability.lumen_cost):
+	var well := _well_for(ability)
+	if well == null or not well.can_afford(ability.lumen_cost):
 		cast_failed.emit(ability, &"cost")
 		return false
 	var acted: bool = bool(effect.call())
 	if not acted:
 		cast_failed.emit(ability, &"no_effect")
 		return false
-	_well.spend(ability.lumen_cost)
+	well.spend(ability.lumen_cost)
 	_last_cast[ability.id] = _current_tick()
 	cast_succeeded.emit(ability)
 	return true

@@ -28,7 +28,13 @@ func _init(ability: AbilityDef, target: Vector3) -> void:
 ## Silently does nothing when no magic system is wired. Looks up the effect for
 ## the ability's kind; if absent, the rule gate still runs with a failing effect
 ## so the no_effect path is deterministic and nothing is spent.
+##
+## When [member WorldContext.metal_reserves] is wired and the ability spends a
+## metal kind, auto-swallows flakes from inventory to top up reserves before the
+## cost gate runs, so a player with flakes but low reserves can still cast.
 func apply(ctx: WorldContext) -> void:
+	if ctx.metal_reserves != null and _ability != null:
+		ctx.metal_reserves.ensure_for_cost(_ability, ctx.inventory)
 	if ctx.magic == null:
 		return
 	if _ability == null:

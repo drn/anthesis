@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="AbilityDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/core/magic/ability_def.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"ferro_pull"
+display_name = "Ferropull"
+kind = &"ferro_pull"
+resource_kind = &"iron"
+lumen_cost = 12.0
+cooldown_ticks = 8
+magnitude = 9.0
+swatch_color = Color(0.25, 0.45, 0.82, 1)
+description = "The blue lines snap taut and the world rushes toward you. Iron investiture floods outward in invisible tendrils — latching to every lodestone vein and skysteel strut — and the target lurches across the void between you like a tide answering the moon."

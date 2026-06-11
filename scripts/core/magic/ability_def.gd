@@ -13,6 +13,8 @@ extends Resource
 ## Effect kind tag dispatched by the magic system.
 ## Valid values: &"shape_burst", &"lumen_bloom", &"skyward".
 @export var kind: StringName
+## Which well this ability spends from: &"lumen" (default) or a metal kind.
+@export var resource_kind: StringName = &"lumen"
 ## Lumen cost deducted from the caster's well on a successful cast.
 @export var lumen_cost: float = 10.0
 ## Minimum ticks between successive casts of this ability.

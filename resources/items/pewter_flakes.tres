@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="ItemDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/core/items/item_def.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"pewter_flakes"
+display_name = "Pewter Flakes"
+max_stack = 99
+category = &"consumable"
+swatch_color = Color(0.62, 0.38, 0.2, 1)
+description = "Coarse vigorite reduced to warm amber-brown grit. Burning it floods every muscle with terrible purpose — strikes land harder, feet move faster, and the world feels made of tissue paper. The crash after, called pewter drag, is a debt always paid."

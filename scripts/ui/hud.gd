@@ -42,6 +42,18 @@ const FLASH_FADE_SECONDS := 0.45
 const QUICK_SLOT_COUNT := 6
 const QUICK_EMPTY_COLOR := Color(0.10, 0.10, 0.18, 0.7)
 
+## Metal gauge: label prefixes for each metal kind, in display order.
+const METAL_KINDS: Array = [&"iron", &"steel", &"pewter", &"tin"]
+const METAL_LABELS: Dictionary = {&"iron": "IRN", &"steel": "STL", &"pewter": "PWT", &"tin": "TIN"}
+## Channel-to-metal-kind mapping for glow: channel id -> metal kind row to light.
+const CHANNEL_METAL_MAP: Dictionary = {&"vigor": &"pewter", &"keensight": &"tin"}
+## Base fill color for metal gauges (muted steel-blue).
+const METAL_BASE_COLOR := Color(0.22, 0.45, 0.70, 0.85)
+## Glow color for an active channel row.
+const METAL_GLOW_COLOR := Color(0.55, 0.85, 1.0, 1.0)
+## Background color for metal gauge bar track.
+const METAL_TRACK_COLOR := Color(0.06, 0.06, 0.14, 0.75)
+
 var _toast_tween: Tween = null
 
 var _well: Object = null
@@ -50,6 +62,17 @@ var _abilities: Array = []
 ## One control bundle per ability slot, parallel to _abilities by index.
 var _slot_veils: Array[ColorRect] = []
 var _slot_flashes: Array[ColorRect] = []
+
+## Bound MetalReserves (may be null).
+var _reserves: Object = null
+## Bound ChannelSystem (may be null).
+var _channels: Object = null
+## Metal gauge container node (built in code; null until bind_metals called).
+var _metal_container: VBoxContainer = null
+## Fill bar rects for each metal kind, keyed by StringName kind.
+var _metal_fills: Dictionary = {}
+## Value labels for each metal kind, keyed by StringName kind.
+var _metal_value_labels: Dictionary = {}
 
 ## Bound Health object (RefCounted; may be null).
 var _health: Object = null
@@ -168,6 +191,44 @@ func bind_health(health: Object) -> void:
 		_on_health_changed(_health.current(), _health.max_health())
 	else:
 		_on_health_changed(0.0, 0.0)
+
+
+## Wire the metal gauge stack to live MetalReserves and ChannelSystem state.
+## Both arguments may be null — the panel degrades to an inert, empty display.
+## reserves must expose changed(kind, current, capacity) and well(kind)->LumenWell;
+## channels must expose channel_changed(id, active). Both are duck-typed.
+func bind_metals(reserves: Object, channels: Object) -> void:
+	# Disconnect previous reserves signal.
+	if (
+		_reserves != null
+		and _reserves.has_signal("changed")
+		and _reserves.changed.is_connected(_on_metal_changed)
+	):
+		_reserves.changed.disconnect(_on_metal_changed)
+	# Disconnect previous channels signal.
+	if (
+		_channels != null
+		and _channels.has_signal("channel_changed")
+		and _channels.channel_changed.is_connected(_on_channel_changed)
+	):
+		_channels.channel_changed.disconnect(_on_channel_changed)
+
+	_reserves = reserves
+	_channels = channels
+
+	_build_metal_gauges()
+
+	if _reserves != null and _reserves.has_signal("changed"):
+		_reserves.changed.connect(_on_metal_changed)
+	if _channels != null and _channels.has_signal("channel_changed"):
+		_channels.channel_changed.connect(_on_channel_changed)
+
+	# Seed initial values for each known kind.
+	for kind in METAL_KINDS:
+		if _reserves != null and _reserves.has_method("well"):
+			var well: Object = _reserves.well(kind)
+			if well != null and well.has_method("current") and well.has_method("capacity"):
+				_on_metal_changed(kind, well.current(), well.capacity())
 
 
 ## Show the death overlay with a countdown message. respawn_in_s is informational.
@@ -447,7 +508,9 @@ func _ability_slot_body(index: int, ability: Object) -> Control:
 	info.add_child(name_label)
 
 	var cost_label := Label.new()
-	cost_label.text = "%d lumen" % int(roundf(_ability_cost(ability)))
+	cost_label.text = (
+		"%d %s" % [int(roundf(_ability_cost(ability))), _ability_resource_kind(ability)]
+	)
 	cost_label.add_theme_color_override("font_color", Color(0.6, 0.75, 0.95, 1.0))
 	cost_label.add_theme_font_size_override("font_size", 11)
 	cost_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -524,3 +587,113 @@ func _ability_color(ability: Object) -> Color:
 	if ability != null and "swatch_color" in ability:
 		return ability.swatch_color
 	return Color.CYAN
+
+
+## Returns the resource kind display string for the cost label.
+## Duck-typed: reads resource_kind if present, falls back to "lumen".
+func _ability_resource_kind(ability: Object) -> String:
+	if ability != null and "resource_kind" in ability:
+		var kind := StringName(ability.resource_kind)
+		if kind != &"" and kind != &"lumen":
+			return String(kind)
+	return "lumen"
+
+
+# ---------------------------------------------------------------------------
+# Metal gauges
+# ---------------------------------------------------------------------------
+
+
+## Build a compact vertical stack of 4 mini metal-reserve bars and attach it
+## to the CanvasLayer in code (mirrors the quick-belt approach: pure code, no
+## hud.tscn edit). Safe to call multiple times — removes the old container first.
+func _build_metal_gauges() -> void:
+	_metal_fills.clear()
+	_metal_value_labels.clear()
+	if _metal_container != null and is_instance_valid(_metal_container):
+		_metal_container.queue_free()
+	_metal_container = null
+
+	_metal_container = VBoxContainer.new()
+	_metal_container.name = "MetalGauges"
+	_metal_container.add_theme_constant_override("separation", 3)
+	# Anchor to the right of the Lumen orb: top-left at 8px from left edge,
+	# below the top of the screen. The integrator owns layout; we park it at a
+	# sensible default that degrades gracefully if the scene is resized.
+	_metal_container.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	_metal_container.position = Vector2(8.0, 8.0)
+	_metal_container.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_metal_container)
+
+	for kind in METAL_KINDS:
+		_metal_container.add_child(_make_metal_row(kind))
+
+
+## Build one row: [label | track bar | fill bar | value label].
+func _make_metal_row(kind: StringName) -> Control:
+	var row := HBoxContainer.new()
+	row.name = "MetalRow_" + String(kind)
+	row.add_theme_constant_override("separation", 4)
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+	# 3-letter kind label.
+	var kind_label := Label.new()
+	kind_label.text = METAL_LABELS.get(kind, String(kind).left(3).to_upper())
+	kind_label.custom_minimum_size = Vector2(28, 0)
+	kind_label.add_theme_color_override("font_color", Color(0.75, 0.88, 1.0, 0.9))
+	kind_label.add_theme_font_size_override("font_size", 11)
+	kind_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.add_child(kind_label)
+
+	# Thin bar track (background) holding the fill rect.
+	var track := ColorRect.new()
+	track.custom_minimum_size = Vector2(60, 8)
+	track.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	track.color = METAL_TRACK_COLOR
+	track.mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+	var fill := ColorRect.new()
+	fill.name = "Fill"
+	fill.set_anchors_preset(Control.PRESET_FULL_RECT)
+	fill.color = METAL_BASE_COLOR
+	fill.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	# Start empty.
+	fill.anchor_right = 0.0
+	track.add_child(fill)
+	row.add_child(track)
+	_metal_fills[kind] = fill
+
+	# Numeric value label.
+	var val_label := Label.new()
+	val_label.text = "0"
+	val_label.custom_minimum_size = Vector2(32, 0)
+	val_label.add_theme_color_override("font_color", Color(0.82, 0.92, 1.0, 0.85))
+	val_label.add_theme_font_size_override("font_size", 11)
+	val_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.add_child(val_label)
+	_metal_value_labels[kind] = val_label
+
+	return row
+
+
+## Repaint one metal gauge row. Emitted by reserves.changed(kind, current, capacity).
+func _on_metal_changed(kind: StringName, current: float, capacity: float) -> void:
+	if not _metal_fills.has(kind):
+		return
+	var cap := maxf(capacity, 0.001)
+	var ratio := clampf(current / cap, 0.0, 1.0)
+	var fill: ColorRect = _metal_fills[kind]
+	fill.anchor_right = ratio
+	var val_label: Label = _metal_value_labels[kind]
+	val_label.text = "%d" % int(roundf(current))
+
+
+## Respond to a channel becoming active or inactive by glowing the matching row.
+func _on_channel_changed(channel_id: StringName, active: bool) -> void:
+	if not CHANNEL_METAL_MAP.has(channel_id):
+		return
+	var kind: StringName = CHANNEL_METAL_MAP[channel_id]
+	if not _metal_fills.has(kind):
+		return
+	var fill: ColorRect = _metal_fills[kind]
+	fill.color = METAL_GLOW_COLOR if active else METAL_BASE_COLOR

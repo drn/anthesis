@@ -256,6 +256,67 @@ transport — there is one clock for the whole game.
   (container provider + nearest-core lookup), and `SequencerCore.setup(transport_callable)`
   binding each freshly placed Core to the pad player's `get_playback_position()`.
 
+### Phase 8 — Ferromancy (live)
+
+Phase 8 adds a second magic tier powered by four metals (iron, steel, pewter, tin),
+two sustained channels (Vigor, Keensight), a physics-based push/pull pair
+(Ferropull / Ferropush), a throwable ferric coin, and a timed status-effect layer.
+All new systems slot into the existing layer model without bending it.
+
+- **Metal reserves** (`MetalReserves`, `scripts/systems/magic/`): one `LumenWell`
+  per metal kind, bundled with the auto-swallow mechanic: `ensure` drains flakes
+  from the player's inventory to top up a well before a cast, consuming the minimum
+  necessary. The `changed` signal re-emits per-kind so the HUD can track each bar
+  independently. Capacity 60 per metal, 30 charge per flake.
+- **Multi-well rule gate** (`MagicSystem` extended): `_init` now accepts either a
+  `LumenWell` (legacy) or a `Callable(kind) -> LumenWell` resolver. A new
+  `resource_kind` field on `AbilityDef` names the well each ability spends from
+  (`&"lumen"` by default — all Phase 1-7 abilities unchanged). `CastCommand` calls
+  `ensure_for_cost` before entering the gate, so flake auto-swallow is transparent
+  to the rule-gate logic.
+- **Sustained channels** (`ChannelSystem`, `scripts/systems/magic/`): a `Node`
+  (so clock connections cannot be GC'd) that installs named channel definitions at
+  boot time. Each tick, every active channel spends its per-tick drain from the
+  appropriate metal well; if spending fails after an auto-swallow attempt, the
+  channel force-stops (`reason = &"depleted"`) and applies the drain-penalty side
+  effect. Flare (`set_flare(true)`) multiplies all active channel drains by 3.0.
+- **Status effects** (`StatusEffectSystem`, `scripts/systems/status/`): a `Node`
+  tracking timed and indefinite effects keyed by `(target_id, effect_id)`. Effects
+  carry `on_apply` / `on_expire` Callables; re-apply refreshes duration without
+  re-firing `on_apply`. Used by vigor (speed boost), keensight (ambient tweak), and
+  pewter drag (crash slow). Wired to `SimulationClock.ticked` alongside channels.
+- **Ferromancy physics** (`FerroKinetics`, `FerromancyRig`): `FerroKinetics` is
+  pure math (no node, fully unit-testable) — cone selection within a 24 m range
+  and impulse calculation that branches on whether the target is anchored or light.
+  `FerromancyRig` (`Node`) extracts the channel boon Callables and the physical
+  application (player velocity / `apply_central_impulse` / combat knockback) from
+  `world.gd` to keep world.gd under the gdlintrc ceiling.
+- **Metal-source protocol**: any node joins group `&"metal_sources"` and exposes
+  `metal_mass: float` + `is_metal_anchored() -> bool`. No registry; candidates are
+  gathered from the scene tree at cast time via `get_nodes_in_group`. Members:
+  four deposit types (mass 400, anchored), ferric coins (mass 0.4, anchored when
+  at rest), and Shardlings (mass 60, not anchored).
+- **Three new client-local commands**: `ToggleChannelCommand`, `SetFlareCommand`,
+  `ThrowCoinCommand`. All `extends WorldCommand`, all non-replicable (like
+  `CastCommand`) — coins and Umbrals are local-only entities in co-op v0.
+  `DamageCommand` gained a Vigor-resist branch: incoming damage is reduced by 30%
+  when the target holds the `&"vigor"` status effect.
+- **Content**: four deposit scenes scattering via the existing flora prop system
+  (`_flora.prop_scenes`, FLORA_COUNT stays 150), four ore items, four flake items,
+  one ferric coin item, five new recipes, two ability `.tres` files. `CreatureDef`
+  gained `metal_mass` (default 0.0 = not ferromantic); Shardling is set to 60.
+- **HUD additions**: `hud.gd` gained `bind_metals(reserves, channels)` — a
+  code-built compact bar stack beside the lumen orb, subscribing to `reserves.changed`
+  and `channels.channel_changed`. Ability slot cost labels are now resource-aware
+  (show "12 iron" instead of "12 lumen" for ferro abilities). `MetalLineOverlay`
+  (Layer 4 presentation) renders blue lines from the camera to nearby metal sources
+  while Tab is held and iron or steel reserve is nonzero — read-only, never mutates
+  state.
+- **`gdlintrc`**: added at repo root to raise `max-file-lines: 1200` (from default
+  1000). Phase 8's irreducible integrator wiring pushed `world.gd` to 1145 lines
+  after ~155 lines of behaviour were extracted to `ferromancy_rig.gd`. All other
+  lint rules keep their defaults.
+
 ### Phase 7 — Host-Authority Co-op (live)
 
 Phase 7 promotes the command layer — designed from Phase 1 to be replication-ready — into

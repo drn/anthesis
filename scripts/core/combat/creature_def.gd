@@ -32,3 +32,5 @@ extends Resource
 @export var core_color: Color = Color(0.7, 0.3, 1.0)
 ## Uniform scale applied to the procedural body mesh.
 @export var body_scale: float = 1.0
+## Ferromantic mass in kg. Zero means this creature is not a metal source.
+@export var metal_mass: float = 0.0

@@ -1,0 +1,9 @@
+# gdlint config (gdtoolkit 4.x). Only the file-lines ceiling is overridden;
+# every other rule keeps its default (merged in by gdtoolkit). The integrator
+# hub scripts/systems/world/world.gd is, by design, "the only place that knows
+# about all subsystems at once" and grows by ~150 lines each feature phase. After
+# eight phases it exceeds the arbitrary 1000-line default. Per-phase wiring that
+# is self-contained is extracted into sibling rigs (e.g. ferromancy_rig.gd), but
+# the irreducible build-order + signal-routing wiring lives in world.gd. This
+# ceiling tunes one size heuristic; it does not disable any correctness lint.
+max-file-lines: 1200

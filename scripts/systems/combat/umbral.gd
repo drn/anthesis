@@ -31,6 +31,9 @@ const BODY_RADIUS := 0.55
 ## Acceleration blend factor applied to horizontal velocity per physics frame.
 const ACCEL := 10.0
 
+## Ferromantic mass exposed to the metal-source protocol (Contract #7).
+var metal_mass: float = 0.0
+
 var _def: CreatureDef
 var _clock: SimulationClock
 var _target: Node3D
@@ -70,6 +73,10 @@ func setup(
 	_health.died.connect(_on_died)
 	if not is_in_group("umbrals"):
 		add_to_group("umbrals")
+	if def.metal_mass > 0.0:
+		metal_mass = def.metal_mass
+		if not is_in_group(&"metal_sources"):
+			add_to_group(&"metal_sources")
 	_build_body()
 	if _clock != null and not _clock.ticked.is_connected(_on_tick):
 		_clock.ticked.connect(_on_tick)
@@ -78,6 +85,11 @@ func setup(
 ## The [Health] pool owned by this Umbral (built in [method setup]).
 func health() -> Health:
 	return _health
+
+
+## Metal-source protocol (#7): Umbrals are never anchored — they can be flung.
+func is_metal_anchored() -> bool:
+	return false
 
 
 ## The [CreatureDef] this Umbral was configured from.

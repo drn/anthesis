@@ -52,7 +52,8 @@ func test_flora_present() -> void:
 	var f := world.flora()
 	assert_not_null(f, "flora() must return a FloraScatter")
 	assert_true(f is FloraScatter, "flora() must be a FloraScatter")
-	assert_eq(f.prop_scenes.size(), 3, "flora must be configured with 3 prop scenes")
+	# 3 bioluminescent props + 4 metal deposits (Phase 8 ferromancy).
+	assert_eq(f.prop_scenes.size(), 7, "flora must be configured with 7 prop scenes")
 
 
 func test_inventory_wired() -> void:
