@@ -7,6 +7,7 @@ extends GutTest
 
 const HUD_PATH := "res://scenes/ui/hud.tscn"
 const PANEL_PATH := "res://scenes/ui/inventory_panel.tscn"
+const ABILITY_SLOTS := "CenterPanel/Margin/Bar/AbilitySlots"
 
 const EXPECTED_SLOTS := 24
 
@@ -223,28 +224,30 @@ func _bound_hud(well: Object, magic: Object, abilities: Array) -> Hud:
 	return hud
 
 
-func test_hud_has_lumen_bar() -> void:
+func test_hud_has_lumen_orb() -> void:
 	var hud := (load(HUD_PATH) as PackedScene).instantiate()
 	add_child_autofree(hud)
-	var bar := hud.get_node_or_null("LumenBar")
-	assert_not_null(bar, "HUD must have a LumenBar node")
-	var label := hud.get_node_or_null("LumenBar/Margin/Body/Label")
-	assert_not_null(label, "Lumen bar must have a label")
-	var fill := hud.get_node_or_null("LumenBar/Margin/Body/Track/Fill")
-	assert_not_null(fill, "Lumen bar must have a fill rect")
+	var orb := hud.get_node_or_null("LumenOrb")
+	assert_not_null(orb, "HUD must have a LumenOrb node")
+	var label := hud.get_node_or_null("LumenOrb/Label")
+	assert_not_null(label, "Lumen orb must have a label")
+	var fill := hud.get_node_or_null("LumenOrb/Fill")
+	assert_not_null(fill, "Lumen orb must have a fill rect")
 
 
 func test_hud_has_ability_slots_container() -> void:
 	var hud := (load(HUD_PATH) as PackedScene).instantiate()
 	add_child_autofree(hud)
-	assert_not_null(hud.get_node_or_null("AbilitySlots"), "HUD must have an AbilitySlots container")
+	assert_not_null(
+		hud.get_node_or_null(ABILITY_SLOTS), "Center panel must hold an AbilitySlots container"
+	)
 
 
 func test_bind_magic_nil_safe() -> void:
 	var hud := (load(HUD_PATH) as PackedScene).instantiate() as Hud
 	add_child_autofree(hud)
 	hud.bind_magic(null, null, [])
-	assert_eq(hud.get_node("AbilitySlots").get_child_count(), 0, "No slots when no abilities")
+	assert_eq(hud.get_node(ABILITY_SLOTS).get_child_count(), 0, "No slots when no abilities")
 	# Null abilities arg must not crash.
 	hud.bind_magic(null, null, [])
 	assert_true(true, "bind_magic tolerates null collaborators")
@@ -252,13 +255,13 @@ func test_bind_magic_nil_safe() -> void:
 
 func test_bind_magic_builds_three_slots() -> void:
 	var hud := _bound_hud(FakeWell.new(30.0, 100.0), FakeMagic.new(), _three_abilities())
-	var slots := hud.get_node("AbilitySlots")
+	var slots := hud.get_node(ABILITY_SLOTS)
 	assert_eq(slots.get_child_count(), 3, "Three abilities -> three slots")
 
 
 func test_each_slot_has_cooldown_veil() -> void:
 	var hud := _bound_hud(FakeWell.new(30.0, 100.0), FakeMagic.new(), _three_abilities())
-	var slots := hud.get_node("AbilitySlots")
+	var slots := hud.get_node(ABILITY_SLOTS)
 	for slot in slots.get_children():
 		var veil := _find_named_descendant(slot, "CooldownVeil")
 		assert_not_null(veil, "Each ability slot must have a CooldownVeil overlay node")
@@ -268,7 +271,7 @@ func test_each_slot_has_cooldown_veil() -> void:
 func test_lumen_label_reflects_well_changed() -> void:
 	var well := FakeWell.new(30.0, 100.0)
 	var hud := _bound_hud(well, FakeMagic.new(), _three_abilities())
-	var label := hud.get_node("LumenBar/Margin/Body/Label") as Label
+	var label := hud.get_node("LumenOrb/Label") as Label
 	assert_eq(label.text, "LUMEN 30 / 100", "Label shows initial well state on bind")
 
 	well.set_current(72.0)
@@ -278,7 +281,7 @@ func test_lumen_label_reflects_well_changed() -> void:
 func test_lumen_fill_color_shifts_with_charge() -> void:
 	var well := FakeWell.new(0.0, 100.0)
 	var hud := _bound_hud(well, FakeMagic.new(), _three_abilities())
-	var fill := hud.get_node("LumenBar/Margin/Body/Track/Fill") as ColorRect
+	var fill := hud.get_node("LumenOrb/Fill") as ColorRect
 	var empty_color := fill.color
 	well.set_current(100.0)
 	assert_ne(fill.color, empty_color, "Fill color must shift as the well fills")
@@ -288,7 +291,7 @@ func test_cooldown_veil_tracks_remaining() -> void:
 	var magic := FakeMagic.new()
 	var abilities := _three_abilities()
 	var hud := _bound_hud(FakeWell.new(30.0, 100.0), magic, abilities)
-	var veil := _find_named_descendant(hud.get_node("AbilitySlots").get_child(0), "CooldownVeil")
+	var veil := _find_named_descendant(hud.get_node(ABILITY_SLOTS).get_child(0), "CooldownVeil")
 
 	# No cooldown -> veil fully retracted (anchor_top == 1.0).
 	magic.remaining = 0

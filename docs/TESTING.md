@@ -73,8 +73,10 @@ To assert signals, call `watch_signals(object)` before the action that fires the
 | `test_environment.gd` | Environment_Rig scene structure and `WorldEnvironment` presence |
 | `test_flora_scatter.gd` | `FloraScatter` deterministic placement from `WorldSeed` |
 | `test_health.gd` | `Health` `take_damage` clamp, `died` fires once, `heal` clamp, dead guard |
-| `test_hud.gd` | `Hud` wiring: inventory panel, lumen bar, ability slots, crafting callback |
-| `test_hud_combat.gd` | `Hud` health bar binding, hurt vignette, death overlay signals |
+| `test_hud.gd` | `Hud` wiring: inventory panel, lumen orb, ability slots, crafting callback |
+| `test_hud_belt.gd` | `Hud` quick-inventory belt mirrors inventory slots, repaints on changed |
+| `test_hud_combat.gd` | `Hud` health orb binding, hurt vignette, death overlay signals |
+| `test_hud_meters.gd` | `Hud` resource-orb shader params (fill_ratio, fill_color, alarm pulse) |
 | `test_intensity_model.gd` | `IntensityModel` heat values, decay, clamp, determinism, no-RNG guard |
 | `test_inventory.gd` | `Inventory` 24-slot stack add/remove, overflow, `changed` signal |
 | `test_item_registry.gd` | `ItemRegistry` scan, `item()`, `recipe()` resolution |

@@ -1,6 +1,8 @@
 class_name Hud
 extends CanvasLayer
-## Heads-up display: crosshair, loot toast, and inventory panel toggle.
+## Heads-up display, Diablo-style: HP and Lumen orbs flank a bottom-center
+## panel holding the ability slots and a quick-inventory belt. Also owns the
+## crosshair, loot toast, and inventory panel toggle.
 ##
 ## Owns no game logic beyond UI presentation. Crafting is routed back to the
 ## World via the on_craft Callable handed to bind(); this HUD never mutates
@@ -15,9 +17,13 @@ const TOAST_FADE_SECONDS := 0.6
 const LUMEN_EMPTY_COLOR := Color(0.35, 0.85, 1.0, 1.0)
 const LUMEN_FULL_COLOR := Color(0.9, 0.35, 0.95, 1.0)
 
-## Health bar fill gradient endpoints (full -> low).
-const HEALTH_FULL_COLOR := Color(0.95, 0.90, 0.85, 1.0)
-const HEALTH_LOW_COLOR := Color(0.9, 0.15, 0.10, 1.0)
+## Health bar fill gradient endpoints (full -> low): Diablo-red when healthy,
+## heating toward hot orange as the pool drains.
+const HEALTH_FULL_COLOR := Color(0.85, 0.12, 0.18, 1.0)
+const HEALTH_LOW_COLOR := Color(1.0, 0.38, 0.08, 1.0)
+## Below these ratios the meter shader gets a nonzero alarm pulse.
+const HEALTH_PULSE_THRESHOLD := 0.3
+const LUMEN_PULSE_THRESHOLD := 0.15
 ## Hurt vignette flash settings.
 const HURT_VIGNETTE_ALPHA := 0.25
 const HURT_VIGNETTE_FADE := 0.45
@@ -30,6 +36,10 @@ const COOLDOWN_VEIL_COLOR := Color(0.0, 0.0, 0.02, 0.6)
 const FLASH_COST_COLOR := Color(1.0, 0.3, 0.35, 0.55)
 const FLASH_COOLDOWN_COLOR := Color(0.6, 0.6, 0.7, 0.5)
 const FLASH_FADE_SECONDS := 0.45
+
+## Quick-inventory belt: first N inventory slots mirrored into the center bar.
+const QUICK_SLOT_COUNT := 6
+const QUICK_EMPTY_COLOR := Color(0.10, 0.10, 0.18, 0.7)
 
 var _toast_tween: Tween = null
 
@@ -45,15 +55,21 @@ var _health: Object = null
 ## Previous health value for detecting damage (hurt vignette trigger).
 var _health_prev: float = -1.0
 
+## Bound Inventory + ItemRegistry for the quick belt (both may be null).
+var _inventory: Object = null
+var _registry: Object = null
+## One swatch/count pair per belt slot, parallel by index.
+var _quick_swatches: Array[ColorRect] = []
+var _quick_counts: Array[Label] = []
+
 @onready var _toast: Label = $Toast
 @onready var _inventory_panel: InventoryPanel = $InventoryPanel
-@onready var _lumen_label: Label = $LumenBar/Margin/Body/Label
-@onready var _lumen_track: ColorRect = $LumenBar/Margin/Body/Track
-@onready var _lumen_fill: ColorRect = $LumenBar/Margin/Body/Track/Fill
-@onready var _ability_slots: HBoxContainer = $AbilitySlots
-@onready var _health_label: Label = $HealthBar/Margin/Body/Label
-@onready var _health_track: ColorRect = $HealthBar/Margin/Body/Track
-@onready var _health_fill: ColorRect = $HealthBar/Margin/Body/Track/Fill
+@onready var _lumen_label: Label = $LumenOrb/Label
+@onready var _lumen_fill: ColorRect = $LumenOrb/Fill
+@onready var _ability_slots: HBoxContainer = $CenterPanel/Margin/Bar/AbilitySlots
+@onready var _quick_slots: HBoxContainer = $CenterPanel/Margin/Bar/QuickSlots
+@onready var _health_label: Label = $HealthOrb/Label
+@onready var _health_fill: ColorRect = $HealthOrb/Fill
 @onready var _hurt_vignette: ColorRect = $HurtVignette
 @onready var _death_overlay: ColorRect = $DeathOverlay
 @onready var _death_label: Label = $DeathOverlay/Label
@@ -61,6 +77,7 @@ var _health_prev: float = -1.0
 
 func _ready() -> void:
 	_toast.modulate = Color(1.0, 1.0, 1.0, 0.0)
+	_build_quick_slots()
 
 
 ## Polls the bound MagicSystem each frame so cooldown veils animate smoothly
@@ -79,10 +96,21 @@ func _unhandled_input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 
 
-## Wire the panel to live game state. crafting is accepted for parity with the
-## contract; the panel only ever asks can_craft() and defers actual crafting to
-## on_craft so writes route through the CommandBus.
+## Wire the panel and quick belt to live game state. crafting is accepted for
+## parity with the contract; the panel only ever asks can_craft() and defers
+## actual crafting to on_craft so writes route through the CommandBus.
 func bind(inventory: Object, registry: Object, crafting: Object, on_craft: Callable) -> void:
+	if (
+		_inventory != null
+		and _inventory.has_signal("changed")
+		and _inventory.changed.is_connected(_refresh_quick_slots)
+	):
+		_inventory.changed.disconnect(_refresh_quick_slots)
+	_inventory = inventory
+	_registry = registry
+	if _inventory != null and _inventory.has_signal("changed"):
+		_inventory.changed.connect(_refresh_quick_slots)
+	_refresh_quick_slots()
 	_inventory_panel.bind(inventory, registry, crafting, on_craft)
 
 
@@ -208,7 +236,88 @@ func _toggle_inventory() -> void:
 
 
 # ---------------------------------------------------------------------------
-# Lumen bar
+# Quick-inventory belt
+# ---------------------------------------------------------------------------
+
+
+## Build the fixed row of belt slots once; bind()/changed only repaint them.
+func _build_quick_slots() -> void:
+	_quick_swatches.clear()
+	_quick_counts.clear()
+	for child in _quick_slots.get_children():
+		child.queue_free()
+	for i in range(QUICK_SLOT_COUNT):
+		var panel := PanelContainer.new()
+		panel.custom_minimum_size = Vector2(44, 44)
+		panel.add_theme_stylebox_override("panel", _slot_stylebox())
+		panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+		var margin := MarginContainer.new()
+		margin.add_theme_constant_override("margin_left", 4)
+		margin.add_theme_constant_override("margin_top", 4)
+		margin.add_theme_constant_override("margin_right", 4)
+		margin.add_theme_constant_override("margin_bottom", 4)
+		margin.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		panel.add_child(margin)
+
+		var swatch := ColorRect.new()
+		swatch.color = QUICK_EMPTY_COLOR
+		swatch.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		margin.add_child(swatch)
+
+		var count := Label.new()
+		count.set_anchors_preset(Control.PRESET_FULL_RECT)
+		count.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		count.vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM
+		count.add_theme_color_override("font_color", Color(0.92, 0.95, 1.0, 1.0))
+		count.add_theme_color_override("font_outline_color", Color(0.0, 0.0, 0.1, 0.9))
+		count.add_theme_constant_override("outline_size", 3)
+		count.add_theme_font_size_override("font_size", 12)
+		count.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		swatch.add_child(count)
+
+		_quick_slots.add_child(panel)
+		_quick_swatches.append(swatch)
+		_quick_counts.append(count)
+
+
+## Repaint the belt from the first QUICK_SLOT_COUNT inventory slots.
+func _refresh_quick_slots() -> void:
+	for i in range(QUICK_SLOT_COUNT):
+		var data: Dictionary = {}
+		if _inventory != null and _inventory.has_method("slot"):
+			data = _inventory.slot(i)
+		var swatch := _quick_swatches[i]
+		var count := _quick_counts[i]
+		if data.is_empty():
+			swatch.color = QUICK_EMPTY_COLOR
+			count.text = ""
+			swatch.tooltip_text = ""
+		else:
+			var id: StringName = data["id"]
+			swatch.color = _item_color(id)
+			count.text = str(data["count"])
+			swatch.tooltip_text = _item_label(id)
+
+
+func _item_color(id: StringName) -> Color:
+	if _registry != null and _registry.has_method("item"):
+		var def: Object = _registry.item(id)
+		if def != null:
+			return def.swatch_color
+	return Color.WHITE
+
+
+func _item_label(id: StringName) -> String:
+	if _registry != null and _registry.has_method("item"):
+		var def: Object = _registry.item(id)
+		if def != null and not String(def.display_name).is_empty():
+			return def.display_name
+	return String(id)
+
+
+# ---------------------------------------------------------------------------
+# Resource orbs (HP / Lumen)
 # ---------------------------------------------------------------------------
 
 
@@ -217,14 +326,26 @@ func _on_health_changed(current: float, max_hp: float) -> void:
 	var ratio := clampf(current / cap, 0.0, 1.0)
 	_health_label.text = "HP %d / %d" % [int(roundf(current)), int(roundf(max_hp))]
 	_health_fill.color = HEALTH_LOW_COLOR.lerp(HEALTH_FULL_COLOR, ratio)
-	var track_w := _health_track.size.x
-	if track_w <= 0.0:
-		track_w = _health_track.custom_minimum_size.x
-	_health_fill.offset_right = track_w * ratio
+	_update_meter(_health_fill, ratio, HEALTH_PULSE_THRESHOLD)
 	# Flash hurt vignette only when health decreased.
 	if _health_prev >= 0.0 and current < _health_prev:
 		_flash_hurt()
 	_health_prev = current
+
+
+## Push fill state into an orb's liquid shader. The ColorRect's color is kept
+## as the source of truth for the fill palette; the shader reads it as a
+## parameter so headless/material-stripped scenes degrade to a plain rect.
+func _update_meter(fill: ColorRect, ratio: float, pulse_threshold: float) -> void:
+	var mat := fill.material as ShaderMaterial
+	if mat == null:
+		return
+	mat.set_shader_parameter("fill_ratio", ratio)
+	mat.set_shader_parameter("fill_color", fill.color)
+	var pulse := 0.0
+	if ratio > 0.0 and ratio < pulse_threshold:
+		pulse = 1.0 - ratio / pulse_threshold
+	mat.set_shader_parameter("pulse", pulse)
 
 
 func _flash_hurt() -> void:
@@ -238,11 +359,7 @@ func _on_well_changed(current: float, capacity: float) -> void:
 	var ratio := clampf(current / cap, 0.0, 1.0)
 	_lumen_label.text = "LUMEN %d / %d" % [int(roundf(current)), int(roundf(capacity))]
 	_lumen_fill.color = LUMEN_EMPTY_COLOR.lerp(LUMEN_FULL_COLOR, ratio)
-	# Fill is left-anchored inside the track; width follows the track's width.
-	var track_w := _lumen_track.size.x
-	if track_w <= 0.0:
-		track_w = _lumen_track.custom_minimum_size.x
-	_lumen_fill.offset_right = track_w * ratio
+	_update_meter(_lumen_fill, ratio, LUMEN_PULSE_THRESHOLD)
 
 
 # ---------------------------------------------------------------------------

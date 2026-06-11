@@ -73,7 +73,7 @@ moves. `spend` is all-or-nothing: it either deducts the full amount and emits
 amount returns `true` (trivial success); non-positive `add` amounts change
 nothing.
 
-The HUD lumen bar connects to `changed` for cheap one-shot refreshes.
+The HUD lumen orb connects to `changed` for cheap one-shot refreshes.
 
 ---
 

@@ -1,7 +1,8 @@
-[gd_scene load_steps=6 format=3]
+[gd_scene load_steps=8 format=3]
 
 [ext_resource type="Script" path="res://scripts/ui/hud.gd" id="1"]
 [ext_resource type="PackedScene" path="res://scenes/ui/inventory_panel.tscn" id="2"]
+[ext_resource type="Shader" path="res://shaders/resource_orb.gdshader" id="3"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBox_crosshair"]
 bg_color = Color(0.6, 0.85, 1.0, 0.9)
@@ -12,29 +13,33 @@ corner_radius_bottom_left = 2
 shadow_color = Color(0.4, 0.7, 1.0, 0.5)
 shadow_size = 4
 
-[sub_resource type="StyleBoxFlat" id="StyleBox_lumen_track"]
-bg_color = Color(0.04, 0.04, 0.1, 0.8)
+[sub_resource type="StyleBoxFlat" id="StyleBox_center_panel"]
+bg_color = Color(0.05, 0.04, 0.1, 0.88)
 border_width_left = 1
 border_width_top = 1
 border_width_right = 1
 border_width_bottom = 1
-border_color = Color(0.4, 0.6, 1.0, 0.45)
-corner_radius_top_left = 7
-corner_radius_top_right = 7
-corner_radius_bottom_right = 7
-corner_radius_bottom_left = 7
+border_color = Color(0.45, 0.5, 0.9, 0.45)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
 
-[sub_resource type="StyleBoxFlat" id="StyleBox_health_track"]
-bg_color = Color(0.04, 0.04, 0.1, 0.8)
-border_width_left = 1
-border_width_top = 1
-border_width_right = 1
-border_width_bottom = 1
-border_color = Color(0.8, 0.5, 0.5, 0.45)
-corner_radius_top_left = 7
-corner_radius_top_right = 7
-corner_radius_bottom_right = 7
-corner_radius_bottom_left = 7
+[sub_resource type="ShaderMaterial" id="Material_health_orb"]
+shader = ExtResource("3")
+shader_parameter/fill_ratio = 1.0
+shader_parameter/fill_color = Color(0.85, 0.12, 0.18, 1.0)
+shader_parameter/frame_color = Color(0.42, 0.3, 0.32, 1.0)
+shader_parameter/back_color = Color(0.05, 0.01, 0.03, 0.92)
+shader_parameter/pulse = 0.0
+
+[sub_resource type="ShaderMaterial" id="Material_lumen_orb"]
+shader = ExtResource("3")
+shader_parameter/fill_ratio = 0.0
+shader_parameter/fill_color = Color(0.35, 0.85, 1.0, 1.0)
+shader_parameter/frame_color = Color(0.3, 0.36, 0.5, 1.0)
+shader_parameter/back_color = Color(0.02, 0.02, 0.07, 0.92)
+shader_parameter/pulse = 0.0
 
 [node name="Hud" type="CanvasLayer"]
 script = ExtResource("1")
@@ -61,9 +66,9 @@ anchor_top = 1.0
 anchor_right = 0.5
 anchor_bottom = 1.0
 offset_left = -200.0
-offset_top = -90.0
+offset_top = -150.0
 offset_right = 200.0
-offset_bottom = -50.0
+offset_bottom = -110.0
 grow_horizontal = 2
 grow_vertical = 0
 mouse_filter = 2
@@ -74,120 +79,120 @@ theme_override_font_sizes/font_size = 18
 horizontal_alignment = 1
 vertical_alignment = 1
 
-[node name="HealthBar" type="PanelContainer" parent="."]
+[node name="HealthOrb" type="Control" parent="."]
 anchors_preset = 2
 anchor_top = 1.0
 anchor_bottom = 1.0
 offset_left = 24.0
-offset_top = -122.0
-offset_right = 284.0
-offset_bottom = -74.0
-grow_vertical = 0
-mouse_filter = 2
-theme_override_styles/panel = SubResource("StyleBox_health_track")
-
-[node name="Margin" type="MarginContainer" parent="HealthBar"]
-layout_mode = 2
-mouse_filter = 2
-theme_override_constants/margin_left = 10
-theme_override_constants/margin_top = 8
-theme_override_constants/margin_right = 10
-theme_override_constants/margin_bottom = 8
-
-[node name="Body" type="VBoxContainer" parent="HealthBar/Margin"]
-layout_mode = 2
-mouse_filter = 2
-theme_override_constants/separation = 4
-
-[node name="Label" type="Label" parent="HealthBar/Margin/Body"]
-layout_mode = 2
-mouse_filter = 2
-text = "HP 0 / 0"
-theme_override_colors/font_color = Color(0.95, 0.85, 0.8, 1.0)
-theme_override_font_sizes/font_size = 13
-
-[node name="Track" type="ColorRect" parent="HealthBar/Margin/Body"]
-custom_minimum_size = Vector2(0, 12)
-layout_mode = 2
-mouse_filter = 2
-color = Color(0.08, 0.04, 0.04, 0.9)
-
-[node name="Fill" type="ColorRect" parent="HealthBar/Margin/Body/Track"]
-layout_mode = 1
-anchors_preset = 4
-anchor_top = 0.5
-anchor_bottom = 0.5
-offset_right = 0.0
-offset_top = -6.0
-offset_bottom = 6.0
-grow_vertical = 2
-mouse_filter = 2
-color = Color(0.95, 0.90, 0.85, 1.0)
-
-[node name="LumenBar" type="PanelContainer" parent="."]
-anchors_preset = 2
-anchor_top = 1.0
-anchor_bottom = 1.0
-offset_left = 24.0
-offset_top = -72.0
-offset_right = 284.0
+offset_top = -218.0
+offset_right = 184.0
 offset_bottom = -24.0
 grow_vertical = 0
 mouse_filter = 2
-theme_override_styles/panel = SubResource("StyleBox_lumen_track")
 
-[node name="Margin" type="MarginContainer" parent="LumenBar"]
-layout_mode = 2
-mouse_filter = 2
-theme_override_constants/margin_left = 10
-theme_override_constants/margin_top = 8
-theme_override_constants/margin_right = 10
-theme_override_constants/margin_bottom = 8
-
-[node name="Body" type="VBoxContainer" parent="LumenBar/Margin"]
-layout_mode = 2
-mouse_filter = 2
-theme_override_constants/separation = 4
-
-[node name="Label" type="Label" parent="LumenBar/Margin/Body"]
-layout_mode = 2
-mouse_filter = 2
-text = "LUMEN 0 / 100"
-theme_override_colors/font_color = Color(0.8, 0.92, 1.0, 1.0)
-theme_override_font_sizes/font_size = 13
-
-[node name="Track" type="ColorRect" parent="LumenBar/Margin/Body"]
-custom_minimum_size = Vector2(0, 12)
-layout_mode = 2
-mouse_filter = 2
-color = Color(0.08, 0.07, 0.16, 0.9)
-
-[node name="Fill" type="ColorRect" parent="LumenBar/Margin/Body/Track"]
+[node name="Label" type="Label" parent="HealthOrb"]
 layout_mode = 1
-anchors_preset = 4
-anchor_top = 0.5
-anchor_bottom = 0.5
-offset_right = 0.0
-offset_top = -6.0
-offset_bottom = 6.0
-grow_vertical = 2
+anchors_preset = 10
+anchor_right = 1.0
+offset_bottom = 24.0
+grow_horizontal = 2
 mouse_filter = 2
-color = Color(0.35, 0.85, 1.0, 1.0)
+text = "HP 0 / 0"
+theme_override_colors/font_color = Color(1.0, 0.88, 0.84, 1.0)
+theme_override_colors/font_outline_color = Color(0.25, 0.02, 0.05, 0.9)
+theme_override_constants/outline_size = 4
+theme_override_font_sizes/font_size = 14
+horizontal_alignment = 1
 
-[node name="AbilitySlots" type="HBoxContainer" parent="."]
+[node name="Fill" type="ColorRect" parent="HealthOrb"]
+material = SubResource("Material_health_orb")
+layout_mode = 1
+anchors_preset = 0
+offset_top = 34.0
+offset_right = 160.0
+offset_bottom = 194.0
+mouse_filter = 2
+color = Color(0.85, 0.12, 0.18, 1.0)
+
+[node name="LumenOrb" type="Control" parent="."]
 anchors_preset = 3
 anchor_left = 1.0
 anchor_top = 1.0
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = -396.0
-offset_top = -76.0
+offset_left = -184.0
+offset_top = -218.0
 offset_right = -24.0
 offset_bottom = -24.0
 grow_horizontal = 0
 grow_vertical = 0
 mouse_filter = 2
+
+[node name="Label" type="Label" parent="LumenOrb"]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_bottom = 24.0
+grow_horizontal = 2
+mouse_filter = 2
+text = "LUMEN 0 / 100"
+theme_override_colors/font_color = Color(0.8, 0.92, 1.0, 1.0)
+theme_override_colors/font_outline_color = Color(0.02, 0.08, 0.25, 0.9)
+theme_override_constants/outline_size = 4
+theme_override_font_sizes/font_size = 14
+horizontal_alignment = 1
+
+[node name="Fill" type="ColorRect" parent="LumenOrb"]
+material = SubResource("Material_lumen_orb")
+layout_mode = 1
+anchors_preset = 0
+offset_top = 34.0
+offset_right = 160.0
+offset_bottom = 194.0
+mouse_filter = 2
+color = Color(0.35, 0.85, 1.0, 1.0)
+
+[node name="CenterPanel" type="PanelContainer" parent="."]
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -360.0
+offset_top = -92.0
+offset_right = 360.0
+offset_bottom = -24.0
+grow_horizontal = 2
+grow_vertical = 0
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBox_center_panel")
+
+[node name="Margin" type="MarginContainer" parent="CenterPanel"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/margin_left = 10
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_right = 10
+theme_override_constants/margin_bottom = 8
+
+[node name="Bar" type="HBoxContainer" parent="CenterPanel/Margin"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 10
+
+[node name="AbilitySlots" type="HBoxContainer" parent="CenterPanel/Margin/Bar"]
+layout_mode = 2
+mouse_filter = 2
 theme_override_constants/separation = 8
+
+[node name="Divider" type="VSeparator" parent="CenterPanel/Margin/Bar"]
+layout_mode = 2
+mouse_filter = 2
+
+[node name="QuickSlots" type="HBoxContainer" parent="CenterPanel/Margin/Bar"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 6
 
 [node name="HurtVignette" type="ColorRect" parent="."]
 modulate = Color(1, 1, 1, 0)

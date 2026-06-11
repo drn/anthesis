@@ -32,15 +32,15 @@ class FakeHealth:
 # ---------------------------------------------------------------------------
 
 
-func test_hud_has_health_bar() -> void:
+func test_hud_has_health_orb() -> void:
 	var hud := (load(HUD_PATH) as PackedScene).instantiate()
 	add_child_autofree(hud)
-	var bar := hud.get_node_or_null("HealthBar")
-	assert_not_null(bar, "HUD must have a HealthBar node")
-	var label := hud.get_node_or_null("HealthBar/Margin/Body/Label")
-	assert_not_null(label, "HealthBar must have a label")
-	var fill := hud.get_node_or_null("HealthBar/Margin/Body/Track/Fill")
-	assert_not_null(fill, "HealthBar must have a fill rect")
+	var orb := hud.get_node_or_null("HealthOrb")
+	assert_not_null(orb, "HUD must have a HealthOrb node")
+	var label := hud.get_node_or_null("HealthOrb/Label")
+	assert_not_null(label, "HealthOrb must have a label")
+	var fill := hud.get_node_or_null("HealthOrb/Fill")
+	assert_not_null(fill, "HealthOrb must have a fill rect")
 
 
 # ---------------------------------------------------------------------------
@@ -53,7 +53,7 @@ func test_bind_health_reflects_initial_state() -> void:
 	var hud := (load(HUD_PATH) as PackedScene).instantiate() as Hud
 	add_child_autofree(hud)
 	hud.bind_health(health)
-	var label := hud.get_node("HealthBar/Margin/Body/Label") as Label
+	var label := hud.get_node("HealthOrb/Label") as Label
 	assert_eq(label.text, "HP 30 / 40", "Health label shows initial state on bind")
 
 
@@ -63,7 +63,7 @@ func test_bind_health_updates_on_changed() -> void:
 	add_child_autofree(hud)
 	hud.bind_health(health)
 	health.set_current(15.0)
-	var label := hud.get_node("HealthBar/Margin/Body/Label") as Label
+	var label := hud.get_node("HealthOrb/Label") as Label
 	assert_eq(label.text, "HP 15 / 40", "Health label updates on health.changed")
 
 
