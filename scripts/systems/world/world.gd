@@ -63,6 +63,11 @@ const RESPAWN_DELAY := 4.0
 
 const _UMBRAL_SCENE := preload("res://scenes/creatures/umbral.tscn")
 
+## Adaptive music tuning (Phase 5 contract #6).
+## An Umbral within this many metres of the player feeds the &"enemy_near"
+## intensity event each tick, lifting the soundtrack as danger closes in.
+const ENEMY_NEAR_DISTANCE := 12.0
+
 ## The single deterministic seed for the whole world. Propagated into the
 ## terrain generator and every randomized subsystem so a given value always
 ## produces the same world.
@@ -98,6 +103,10 @@ var _spawn_counter := 0
 var _player_dead := false
 var _spawn_point := Vector3.ZERO
 
+var _intensity: IntensityModel
+var _stem_registry: MusicStemRegistry
+var _music: MusicSystem
+
 var _poll_elapsed := 0.0
 var _player_placed := false
 var _flora_scattered := false
@@ -116,6 +125,7 @@ func _ready() -> void:
 	_install_ability_effects()
 	_wire_combat()
 	_build_hud()
+	_build_music()
 	# Park the player up high until terrain streams in, then drop them onto it.
 	_player.global_position = Vector3(0.0, PLAYER_SAFE_ALTITUDE, 0.0)
 
@@ -203,6 +213,16 @@ func player_health() -> Health:
 ## The creature definition catalog.
 func creatures() -> CreatureRegistry:
 	return _creatures
+
+
+## The adaptive stem mixer (Phase 5).
+func music() -> MusicSystem:
+	return _music
+
+
+## The game-intensity signal driving the soundtrack (Phase 5).
+func intensity() -> IntensityModel:
+	return _intensity
 
 
 # ---------------------------------------------------------------------------
@@ -338,6 +358,70 @@ func _build_hud() -> void:
 
 func _on_loot_awarded(amounts: Array[ItemAmount]) -> void:
 	_hud.show_loot(amounts, _registry)
+
+
+# ---------------------------------------------------------------------------
+# Adaptive music (Phase 5 contract #6)
+# ---------------------------------------------------------------------------
+
+
+## Stand up the adaptive soundtrack and wire it to the gameplay event streams.
+##
+## A single [IntensityModel] is the soundtrack's "how intense is the moment"
+## signal; the [MusicSystem] reads it to crossfade phase-locked stems loaded via
+## the [MusicStemRegistry]. The model is fed from three sources, all read-only:
+## the [CommandBus] (dig/cast/harvest intents), the [CombatService.damage_applied]
+## signal (player-hurt vs. enemy hit), and a per-tick proximity check for nearby
+## Umbrals. The clock drives both the model's decay and the volume slew inside
+## [MusicSystem].
+func _build_music() -> void:
+	_intensity = IntensityModel.new()
+	_stem_registry = MusicStemRegistry.new()
+	_music = MusicSystem.new()
+	_music.name = "MusicSystem"
+	add_child(_music)
+	_music.setup(_stem_registry.stems(), _intensity, _clock)
+
+	# Event sources feed heat into the intensity model (presentation reads only).
+	_command_bus.command_executed.connect(_on_command_executed)
+	_combat.damage_applied.connect(_on_damage_for_music)
+	_clock.ticked.connect(_on_music_tick)
+
+
+## Map an executed command to its intensity event kind. Only the player-driven
+## intents that should colour the soundtrack are mapped; everything else (place,
+## craft, damage) is silent here — damage is handled via [CombatService].
+func _on_command_executed(cmd: WorldCommand) -> void:
+	if cmd is DigCommand:
+		_intensity.on_event(&"dig")
+	elif cmd is CastCommand:
+		_intensity.on_event(&"cast")
+	elif cmd is HarvestCommand:
+		_intensity.on_event(&"harvest")
+
+
+## Route applied damage into the intensity model: a hit on the player is the
+## tense &"player_hurt", anything else is a &"combat_hit" the player landed.
+func _on_damage_for_music(target_id: int, _amount: float) -> void:
+	if target_id == _player.get_instance_id():
+		_intensity.on_event(&"player_hurt")
+	else:
+		_intensity.on_event(&"combat_hit")
+
+
+## Each simulation tick, raise intensity once if any Umbral is closing in. The
+## [MusicSystem] connects to the same [signal SimulationClock.ticked] to decay
+## the model and slew volumes; this handler only adds proximity heat.
+func _on_music_tick(_tick_index: int) -> void:
+	if not _player_placed or _umbrals == null:
+		return
+	var player_pos := _player.global_position
+	for child in _umbrals.get_children():
+		if not (child is Umbral):
+			continue
+		if player_pos.distance_to((child as Umbral).global_position) <= ENEMY_NEAR_DISTANCE:
+			_intensity.on_event(&"enemy_near")
+			return
 
 
 # ---------------------------------------------------------------------------
