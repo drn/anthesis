@@ -90,7 +90,31 @@ make test
 
 The editor binary lands at `tools/godot/macos_editor.app` (gitignored).
 
-**Controls**: WASD move · Space jump · LMB dig · RMB place · F strike · E harvest/interact · 1-3 cast abilities · N/B place sequencer/note blocks · Tab inventory · Esc release mouse
+---
+
+## Controls
+
+| Input | Action |
+|-------|--------|
+| **W A S D** | Move |
+| **Space** | Jump |
+| **Mouse** | Look |
+| **Left click** | Dig terrain |
+| **Right click** | Place terrain |
+| **F** | Strike (attack Umbrals / remove placed blocks) |
+| **E** | Harvest flora · retune a Note Block |
+| **1 / 2 / 3** | Cast: Lumen Bloom · Worldshaper Burst · Skyward Step |
+| **N** | Place a Sequencer Core (requires one in inventory) |
+| **B** | Place a Note Block (requires one in inventory) |
+| **Tab** | Inventory + crafting panel |
+| **M** | Multiplayer panel (host / join) |
+| **Esc** | Release / recapture the mouse |
+
+Harvest glowing flora to fill your lumen well — magic costs lumen, and the
+flora's glow is also what keeps Umbrals from spawning near you. Craft a
+Sequencer Core plus Note Blocks (Tab) and arrange the blocks in a ring around
+the core: each block's angle picks its step in a 16-step loop synced to the
+soundtrack, and E retunes its pitch.
 
 ---
 
